@@ -508,6 +508,12 @@
     border-top:1px solid var(--line);
   }
   /* ---------- toolbar search + category filter ---------- */
+  .toolbar-group{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:nowrap;
+  }
   .toolbar-input{
     padding:9px 12px;
     border:1px solid var(--line);
@@ -653,6 +659,7 @@
     .brand-header .org-name{text-align:center;}
     .global-toggles{flex-direction:column; align-items:flex-start; gap:10px;}
     .editor-toolbar{flex-direction:column; align-items:stretch;}
+    .toolbar-group{width:100%;}
     .brand-multi-trigger, #searchInput, #categoryFilterSelect{min-width:0; width:100%;}
     .card{padding:14px;}
     .card-body{flex-direction:column-reverse;}
@@ -734,29 +741,35 @@
 
 
     <div class="editor-toolbar">
-      <label>جستجو:</label>
-      <input type="text" id="searchInput" class="toolbar-input" placeholder="نام، توضیحات یا برند...">
+      <div class="toolbar-group">
+        <label>جستجو:</label>
+        <input type="text" id="searchInput" class="toolbar-input" placeholder="نام، توضیحات یا برند...">
+      </div>
 
-      <label>فیلتر برند:</label>
-      <div class="brand-multi" id="brandMulti">
-        <button type="button" class="brand-multi-trigger" id="brandMultiTrigger">
-          <span id="brandMultiLabel">همه برندها</span>
-          <span class="caret">▾</span>
-        </button>
-        <div class="brand-multi-panel" id="brandMultiPanel">
-          <label class="brand-opt brand-opt-all">
-            <input type="checkbox" id="brandAllChk" checked>
-            <span>همه برندها</span>
-          </label>
-          <div class="brand-opt-divider"></div>
-          <div id="brandOptList"></div>
+      <div class="toolbar-group">
+        <label>فیلتر برند:</label>
+        <div class="brand-multi" id="brandMulti">
+          <button type="button" class="brand-multi-trigger" id="brandMultiTrigger">
+            <span id="brandMultiLabel">همه برندها</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="brand-multi-panel" id="brandMultiPanel">
+            <label class="brand-opt brand-opt-all">
+              <input type="checkbox" id="brandAllChk" checked>
+              <span>همه برندها</span>
+            </label>
+            <div class="brand-opt-divider"></div>
+            <div id="brandOptList"></div>
+          </div>
         </div>
       </div>
 
-      <label>نوع محصول:</label>
-      <select id="categoryFilterSelect" class="toolbar-input">
-        <option value="">همه دسته‌ها</option>
-      </select>
+      <div class="toolbar-group">
+        <label>نوع محصول:</label>
+        <select id="categoryFilterSelect" class="toolbar-input">
+          <option value="">همه دسته‌ها</option>
+        </select>
+      </div>
 
       <button class="btn btn-ghost" id="refreshBrandsBtn" style="color:#333;background:#eef5ef;">به‌روزرسانی فهرست برندها</button>
       <span id="productCount" style="font-size:12.5px;color:var(--ink-soft);"></span>
