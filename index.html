@@ -1677,21 +1677,33 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
     }
 
     // ---- Content pages: header + up to 4 products per page ----
+    // Target height (in px, at the same scale as contentWidthPx) that a full
+    // page's content box (CONTENT_W x CONTENT_H mm) corresponds to. Giving the
+    // capture container this as a min-height (not a fixed height) lets flexbox
+    // spread any leftover vertical space evenly between the header/cards
+    // instead of leaving it as blank space at the bottom of the page, while
+    // still letting the container grow taller if the content genuinely needs
+    // more room (handled by the existing shrink-to-fit logic below).
+    const pxPerMm = contentWidthPx / CONTENT_W;
+    const targetHeightPx = CONTENT_H * pxPerMm;
+
     for(let i = 0; i < cardEls.length; i += PER_PAGE){
       const chunk = cardEls.slice(i, i + PER_PAGE);
 
       const container = document.createElement('div');
-      container.style.cssText = `position:absolute;left:-99999px;top:0;width:${contentWidthPx}px;background:#fff;padding:0 8px 8px;`;
+      container.style.cssText = `position:absolute;left:-99999px;top:0;width:${contentWidthPx}px;min-height:${targetHeightPx}px;background:#fff;padding:0 8px 8px;display:flex;flex-direction:column;justify-content:space-between;`;
 
       const headerClone = headerEl.cloneNode(true);
       headerClone.removeAttribute('id');
       headerClone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+      headerClone.style.flex = '0 0 auto';
       container.appendChild(headerClone);
 
       chunk.forEach(card=>{
         const clone = card.cloneNode(true);
         clone.removeAttribute('id');
         clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+        clone.style.flex = '0 0 auto';
         container.appendChild(clone);
       });
 
