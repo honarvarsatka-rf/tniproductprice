@@ -1590,7 +1590,7 @@ document.getElementById('confirmAddBtn').addEventListener('click', ()=>{
 });
 
 // ---------- export to PDF ----------
-document.getElementById('exportBtn').addEventListener('click', ()=>{
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
   const sheet = document.getElementById('sheet');
   const hiddenCards = [];
   document.querySelectorAll('#cards .card').forEach(card=>{
@@ -1609,7 +1609,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   const PER_PAGE = 4;
   const headerEl = document.querySelector('.brand-header');
 
-  // force a page break after every 5th card that will actually be printed,
+  // force a page break after every 4th card that will actually be printed,
   // and repeat the header at the top of each following page
   const printedCards = [...document.querySelectorAll('#cards .card')]
     .filter(card => card.style.display !== 'none');
@@ -1633,6 +1633,30 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
     printedCards.forEach(card=>card.classList.remove('pdf-page-break'));
     injectedHeaders.forEach(el=>el.remove());
     document.body.classList.remove('exporting');
+  }
+
+  // Freshly-injected clones (and the exporting-mode compact styles) need a
+  // real layout + paint pass before html2canvas photographs them, otherwise
+  // the browser can capture them half-rendered — this shows up as a
+  // repeated header with the background/text missing on some machines.
+  // Force a synchronous reflow, wait for every image to finish decoding,
+  // then give the browser two paint frames before starting the capture.
+  injectedHeaders.forEach(el => el.offsetHeight); // force reflow
+
+  const images = [...sheet.querySelectorAll('img')];
+  await Promise.all(images.map(img=>{
+    if(img.complete) return Promise.resolve();
+    if(img.decode) return img.decode().catch(()=>{});
+    return new Promise(resolve=>{
+      img.addEventListener('load', resolve, { once:true });
+      img.addEventListener('error', resolve, { once:true });
+    });
+  }));
+
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  if(document.fonts && document.fonts.ready){
+    try { await document.fonts.ready; } catch(err){ /* ignore, proceed anyway */ }
   }
 
   const opt = {
