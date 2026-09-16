@@ -1629,7 +1629,15 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       document.body.appendChild(container);
       await waitForRender(container);
       container.offsetHeight; // force reflow
-      const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor:'#ffffff' });
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: container.scrollWidth,
+        height: container.scrollHeight,
+        windowWidth: container.scrollWidth,
+        windowHeight: container.scrollHeight
+      });
       container.remove();
 
       let wMm = maxWmm;
@@ -1649,7 +1657,7 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       const coverImg = coverEl.querySelector('img');
       if(coverImg){
         const coverContainer = document.createElement('div');
-        coverContainer.style.cssText = 'position:fixed;left:-99999px;top:0;width:800px;background:#fff;';
+        coverContainer.style.cssText = 'position:absolute;left:-99999px;top:0;width:800px;background:#fff;';
         const coverClone = coverEl.cloneNode(true); // keeps class="pdf-cover-page" so its CSS still applies
         coverClone.removeAttribute('id');
         coverContainer.appendChild(coverClone);
@@ -1664,7 +1672,7 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       const chunk = cardEls.slice(i, i + PER_PAGE);
 
       const container = document.createElement('div');
-      container.style.cssText = `position:fixed;left:-99999px;top:0;width:${contentWidthPx}px;background:#fff;padding:0 8px 8px;`;
+      container.style.cssText = `position:absolute;left:-99999px;top:0;width:${contentWidthPx}px;background:#fff;padding:0 8px 8px;`;
 
       const headerClone = headerEl.cloneNode(true);
       headerClone.removeAttribute('id');
