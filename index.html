@@ -928,8 +928,8 @@ const cardsEl = document.getElementById('cards');
 let globalShowPrice = true;
 let globalShowPrice2 = true;
 
-// ---------- header logo upload ----------
-const LOGO_STORAGE_KEY = 'taminnahade_logo';
+// ---------- header logo upload (shared across everyone via Supabase) ----------
+const LOGO_STORAGE_KEY = 'taminnahade_logo'; // used only as an instant-paint cache on this device
 const logoBox = document.getElementById('logoBox');
 
 function renderLogo(dataUrl){
@@ -959,19 +959,53 @@ function bindLogoInput(){
     const file = e.target.files[0];
     if(!file) return;
     const reader = new FileReader();
-    reader.onload = ev=>{
+    reader.onload = async ev=>{
       const dataUrl = ev.target.result;
-      try { localStorage.setItem(LOGO_STORAGE_KEY, dataUrl); } catch(err){ /* storage may be full */ }
-      renderLogo(dataUrl);
+      renderLogo(dataUrl); // show it immediately, don't wait on the network
+
+      try { localStorage.setItem(LOGO_STORAGE_KEY, dataUrl); } catch(err){ /* storage may be full, not critical */ }
+
+      if(sbClient){
+        const { error } = await sbClient
+          .from('site_settings')
+          .upsert({ id: 1, logo_url: dataUrl }, { onConflict: 'id' });
+        if(error){
+          alert('لوگو روی این دستگاه ذخیره شد اما روی سرور ذخیره نشد (بقیه افراد نمی‌بینندش): ' + error.message);
+        }
+      }
     };
     reader.readAsDataURL(file);
   });
 }
 
-// restore a previously uploaded logo
-let savedLogo = null;
-try { savedLogo = localStorage.getItem(LOGO_STORAGE_KEY); } catch(err){ savedLogo = null; }
-renderLogo(savedLogo);
+// on load: try the shared logo from Supabase first (visible to everyone),
+// falling back to this device's local cache if the database isn't reachable yet
+async function loadLogo(){
+  let localCache = null;
+  try { localCache = localStorage.getItem(LOGO_STORAGE_KEY); } catch(err){ localCache = null; }
+  renderLogo(localCache); // instant paint while we check the server
+
+  if(!sbClient) return;
+  const { data, error } = await sbClient
+    .from('site_settings')
+    .select('logo_url')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if(error){
+    // table probably doesn't exist yet — keep whatever we showed from the local cache
+    console.warn('بارگذاری لوگوی مشترک با خطا مواجه شد:', error.message);
+    return;
+  }
+  if(data && data.logo_url){
+    renderLogo(data.logo_url);
+    try { localStorage.setItem(LOGO_STORAGE_KEY, data.logo_url); } catch(err){ /* ignore */ }
+  } else if(!localCache){
+    renderLogo(null);
+  }
+}
+
+loadLogo();
 
 function escapeHtml(value){
   return String(value ?? '')
@@ -1607,7 +1641,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: ['css', 'legacy'], after: '.pdf-page-break', avoid: '.card' }
+    pagebreak:    { mode: ['legacy'], after: ['.pdf-page-break', '.pdf-cover-page'], avoid: '.card' }
   };
 
   html2pdf().set(opt).from(sheet).save().then(cleanup).catch((err)=>{
