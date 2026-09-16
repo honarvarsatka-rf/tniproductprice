@@ -1653,16 +1653,25 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
     let firstPage = true;
 
     // ---- Page 1: cover image, full bleed ----
+    // This is a static image, so skip the DOM/html2canvas round-trip entirely
+    // (which was fighting CSS cascade issues) and hand it straight to jsPDF.
     if(coverEl){
       const coverImg = coverEl.querySelector('img');
-      if(coverImg){
-        const coverContainer = document.createElement('div');
-        coverContainer.style.cssText = 'position:absolute;left:-99999px;top:0;width:800px;background:#fff;';
-        const coverClone = coverEl.cloneNode(true); // keeps class="pdf-cover-page" so its CSS still applies
-        coverClone.removeAttribute('id');
-        coverContainer.appendChild(coverClone);
-        const { dataUrl, wMm, hMm } = await captureToImage(coverContainer, PAGE_W, PAGE_H);
-        pdf.addImage(dataUrl, 'JPEG', (PAGE_W - wMm) / 2, (PAGE_H - hMm) / 2, wMm, hMm);
+      if(coverImg && coverImg.src){
+        await new Promise(resolve=>{
+          if(coverImg.complete && coverImg.naturalWidth) return resolve();
+          coverImg.addEventListener('load', resolve, { once:true });
+          coverImg.addEventListener('error', resolve, { once:true });
+        });
+        const iw = coverImg.naturalWidth || 1;
+        const ih = coverImg.naturalHeight || 1;
+        let wMm = PAGE_W;
+        let hMm = ih * (wMm / iw);
+        if(hMm > PAGE_H){
+          hMm = PAGE_H;
+          wMm = iw * (hMm / ih);
+        }
+        pdf.addImage(coverImg.src, 'JPEG', (PAGE_W - wMm) / 2, (PAGE_H - hMm) / 2, wMm, hMm);
         firstPage = false;
       }
     }
