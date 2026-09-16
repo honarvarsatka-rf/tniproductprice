@@ -591,8 +591,8 @@
   body.exporting .brand-header .org-name{font-size:18px;}
   body.exporting .brand-header .contact{font-size:13px; line-height:1.85;}
   body.exporting .logo-box img{max-height:48px; max-width:160px;}
-  body.exporting .card h3{font-size:15.5px; margin:0 0 7px; padding-bottom:5px;}
-  body.exporting .card p.desc{font-size:10.5px; line-height:1.85; margin:0 0 9px;}
+  body.exporting .card h3{font-size:16px; margin:0 0 8px; padding-bottom:5px;}
+  body.exporting .card p.desc{font-size:13px; line-height:2; margin:0 0 10px;}
   body.exporting .card-body{gap:14px;}
   body.exporting table.spec{font-size:10.5px; margin-bottom:9px;}
   body.exporting table.spec th,
@@ -1691,7 +1691,7 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       const chunk = cardEls.slice(i, i + PER_PAGE);
 
       const container = document.createElement('div');
-      container.style.cssText = `position:absolute;left:-99999px;top:0;width:${contentWidthPx}px;min-height:${targetHeightPx}px;background:#fff;padding:0 8px 8px;display:flex;flex-direction:column;justify-content:space-between;`;
+      container.style.cssText = `position:absolute;left:-99999px;top:0;width:${contentWidthPx}px;min-height:${targetHeightPx}px;background:#fff;padding:0 8px 8px;display:flex;flex-direction:column;`;
 
       const headerClone = headerEl.cloneNode(true);
       headerClone.removeAttribute('id');
@@ -1699,11 +1699,17 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       headerClone.style.flex = '0 0 auto';
       container.appendChild(headerClone);
 
+      // Cards grow to absorb any leftover page height themselves (and their
+      // content is centered within the extra room) instead of that space
+      // showing up as a big visible gap between products.
       chunk.forEach(card=>{
         const clone = card.cloneNode(true);
         clone.removeAttribute('id');
         clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
-        clone.style.flex = '0 0 auto';
+        clone.style.flex = '1 1 0';
+        clone.style.display = 'flex';
+        clone.style.flexDirection = 'column';
+        clone.style.justifyContent = 'center';
         container.appendChild(clone);
       });
 
