@@ -373,6 +373,19 @@
     padding:4px 9px;
     margin-top:3px;
   }
+  .category-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    font-size:11px;
+    background:#f5f0e5;
+    color:#8a5a10;
+    border:1px solid #e6d6ae;
+    border-radius:999px;
+    padding:4px 9px;
+    margin-top:3px;
+    margin-right:6px;
+  }
   .hidden-pdf-badge{
     display:inline-block;
     font-size:11px;
@@ -494,6 +507,19 @@
     padding-top:12px;
     border-top:1px solid var(--line);
   }
+  /* ---------- toolbar search + category filter ---------- */
+  .toolbar-input{
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fbfcfb;
+    font-family:inherit;
+    font-size:13px;
+    color:var(--ink);
+  }
+  #searchInput{min-width:220px;}
+  #categoryFilterSelect{min-width:170px; cursor:pointer;}
+
   @media (max-width:700px){
     .editor-grid{grid-template-columns:1fr;}
     .editor-grid .full{grid-column:auto;}
@@ -534,7 +560,7 @@
   body:not(.locked) #loginOverlay{display:none;}
 
   @media print{
-    .toolbar, #addForm, #addFormOverlay, .del-btn, .global-toggles, .img-upload-label, .editor-toolbar, .card-actions, .editor-modal, #loginOverlay, .brand-chip, .drag-handle, .logo-placeholder-label{display:none !important;}
+    .toolbar, #addForm, #addFormOverlay, .del-btn, .global-toggles, .img-upload-label, .editor-toolbar, .card-actions, .editor-modal, #loginOverlay, .brand-chip, .category-chip, .drag-handle, .logo-placeholder-label{display:none !important;}
     body{background:#fff;}
   }
   body.exporting .toolbar,
@@ -547,6 +573,7 @@
   body.exporting .card-actions,
   body.exporting .editor-modal,
   body.exporting .brand-chip,
+  body.exporting .category-chip,
   body.exporting .drag-handle,
   body.exporting .logo-placeholder-label{
     display:none !important;
@@ -606,6 +633,38 @@
   body.exporting .img-col{flex:0 0 102px; width:102px;}
   body.exporting .img-box{width:102px; height:102px; border-radius:10px;}
   body.exporting .card-footer{gap:9px;}
+  /* ---------- change history ---------- */
+  .history-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:11px 4px; border-bottom:1px solid var(--line);
+  }
+  .history-row:last-child{border-bottom:none;}
+  .history-title{font-size:13.5px; font-weight:700; color:var(--brand-dark);}
+  .history-meta{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+
+  /* ---------- mobile responsive ---------- */
+  @media (max-width:640px){
+    .toolbar{flex-direction:column; align-items:stretch;}
+    .toolbar h1{font-size:14px; text-align:center;}
+    .toolbar .actions{justify-content:center;}
+    .brand-header{padding:16px; flex-direction:column; align-items:stretch; text-align:center;}
+    .brand-header .contact{direction:ltr; align-items:center;}
+    .brand-header .contact div{justify-content:center;}
+    .brand-header .org-name{text-align:center;}
+    .global-toggles{flex-direction:column; align-items:flex-start; gap:10px;}
+    .editor-toolbar{flex-direction:column; align-items:stretch;}
+    .brand-multi-trigger, #searchInput, #categoryFilterSelect{min-width:0; width:100%;}
+    .card{padding:14px;}
+    .card-body{flex-direction:column-reverse;}
+    .img-col{width:100%; flex:0 0 auto; flex-direction:row; justify-content:center;}
+    .card-top{flex-wrap:wrap;}
+    table.spec{display:block; overflow-x:auto; white-space:nowrap;}
+    .card-footer{flex-direction:column; align-items:flex-start;}
+    .prices, .prices-block{width:100%; justify-content:space-between;}
+    .price-line input{width:110px;}
+    #addForm{width:100vw;}
+    .history-row{flex-direction:column; align-items:flex-start; gap:8px;}
+  }
 </style>
 </head>
 <body class="locked">
@@ -632,6 +691,9 @@
     <h1>ویرایشگر لیست قیمت — سازمان تأمین نهاده ایران</h1>
     <div class="actions">
       <button class="btn btn-ghost" id="toggleAddBtn">+ افزودن محصول</button>
+      <button class="btn btn-ghost" id="historyBtn">🕘 تاریخچه تغییرات</button>
+      <button class="btn btn-ghost" id="backupJsonBtn">⬇ بک‌آپ JSON</button>
+      <button class="btn btn-ghost" id="backupCsvBtn">⬇ بک‌آپ CSV</button>
       <button class="btn btn-primary" id="exportBtn">دریافت PDF</button>
     </div>
   </div>
@@ -672,6 +734,9 @@
 
 
     <div class="editor-toolbar">
+      <label>جستجو:</label>
+      <input type="text" id="searchInput" class="toolbar-input" placeholder="نام، توضیحات یا برند...">
+
       <label>فیلتر برند:</label>
       <div class="brand-multi" id="brandMulti">
         <button type="button" class="brand-multi-trigger" id="brandMultiTrigger">
@@ -687,6 +752,12 @@
           <div id="brandOptList"></div>
         </div>
       </div>
+
+      <label>نوع محصول:</label>
+      <select id="categoryFilterSelect" class="toolbar-input">
+        <option value="">همه دسته‌ها</option>
+      </select>
+
       <button class="btn btn-ghost" id="refreshBrandsBtn" style="color:#333;background:#eef5ef;">به‌روزرسانی فهرست برندها</button>
       <span id="productCount" style="font-size:12.5px;color:var(--ink-soft);"></span>
     </div>
@@ -709,6 +780,10 @@
           <div class="editor-field">
             <label>برند</label>
             <input type="text" id="editBrand" placeholder="مثلاً BIOBE">
+          </div>
+          <div class="editor-field">
+            <label>نوع محصول</label>
+            <input type="text" id="editCategory" placeholder="کود مایع">
           </div>
           <div class="editor-field full">
             <label>توضیحات محصول</label>
@@ -743,6 +818,16 @@
       </div>
     </div>
 
+    <div id="historyModal" class="editor-modal">
+      <div class="editor-panel" style="width:min(560px,100%);">
+        <div class="editor-panel-head">
+          <h4>تاریخچه تغییرات (۵۰ مورد اخیر)</h4>
+          <button type="button" class="close-editor" id="closeHistoryBtn">×</button>
+        </div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+
     <div id="addFormOverlay"></div>
     <div id="addForm">
       <div class="addform-head">
@@ -756,6 +841,10 @@
       <div class="field">
         <label>برند</label>
         <input type="text" id="newBrand" placeholder="مثال: BIOBE">
+      </div>
+      <div class="field">
+        <label>نوع محصول (مثلاً کود مایع، کود گرانوله، اسیدی)</label>
+        <input type="text" id="newCategory" placeholder="کود مایع">
       </div>
       <div class="field">
         <label>توضیحات محصول</label>
@@ -1015,6 +1104,8 @@ function rtlPunct(value){
 
 // set of selected brands; empty set means "all brands"
 let selectedBrands = new Set();
+let selectedCategory = ''; // '' means "all categories"
+let searchQuery = '';
 
 function getBrands(){
   const set = new Set();
@@ -1023,6 +1114,26 @@ function getBrands(){
     set.add(b);
   });
   return [...set].sort((a,b)=>a.localeCompare(b,'fa'));
+}
+
+function getCategories(){
+  const set = new Set();
+  products.forEach(p=>{
+    const c = (p.category || '').trim();
+    if(c) set.add(c);
+  });
+  return [...set].sort((a,b)=>a.localeCompare(b,'fa'));
+}
+
+function refreshCategoryFilter(){
+  const select = document.getElementById('categoryFilterSelect');
+  const categories = getCategories();
+  if(selectedCategory && !categories.includes(selectedCategory)) selectedCategory = '';
+
+  const prev = select.value;
+  select.innerHTML = '<option value="">همه دسته‌ها</option>' +
+    categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  select.value = categories.includes(prev) ? prev : selectedCategory;
 }
 
 function updateBrandLabel(){
@@ -1102,6 +1213,7 @@ function openEditor(idx){
   document.getElementById('editorModalTitle').textContent = `ویرایش: ${p.title}`;
   document.getElementById('editTitle').value = p.title || '';
   document.getElementById('editBrand').value = p.brand || 'عمومی';
+  document.getElementById('editCategory').value = p.category || '';
   document.getElementById('editDesc').value = p.desc || '';
   document.getElementById('editSize').value = p.size || '-';
   document.getElementById('editPrice').value = p.price || '0';
@@ -1117,17 +1229,23 @@ function closeEditor(){
 
 function render(){
   refreshBrandFilter();
+  refreshCategoryFilter();
   cardsEl.innerHTML = '';
 
-  const visibleProducts = products.filter(p =>
-    selectedBrands.size === 0 || selectedBrands.has((p.brand || 'عمومی').trim() || 'عمومی')
-  );
+  const q = searchQuery.trim().toLowerCase();
+
+  const visibleProducts = products.filter(p => {
+    const brandOk = selectedBrands.size === 0 || selectedBrands.has((p.brand || 'عمومی').trim() || 'عمومی');
+    const categoryOk = !selectedCategory || (p.category || '').trim() === selectedCategory;
+    const searchOk = !q || [p.title, p.desc, p.brand, p.category].some(v => (v || '').toLowerCase().includes(q));
+    return brandOk && categoryOk && searchOk;
+  });
 
   document.getElementById('productCount').textContent =
     `${visibleProducts.length} محصول`;
 
   if(visibleProducts.length === 0){
-    cardsEl.innerHTML = '<p style="text-align:center;color:#5b6b62;padding:24px;">محصولی برای این برند پیدا نشد.</p>';
+    cardsEl.innerHTML = '<p style="text-align:center;color:#5b6b62;padding:24px;">محصولی با این فیلترها پیدا نشد.</p>';
     return;
   }
 
@@ -1160,6 +1278,7 @@ function render(){
           <div>
             <h3>${escapeHtml(p.title)}</h3>
             <div class="brand-chip">برند: ${escapeHtml(p.brand || 'عمومی')}</div>
+            ${p.category ? `<div class="category-chip">نوع: ${escapeHtml(p.category)}</div>` : ''}
             ${p.hidden_pdf ? '<span class="hidden-pdf-badge">در PDF نمایش داده نمی‌شود</span>' : ''}
           </div>
         </div>
@@ -1216,21 +1335,27 @@ function render(){
 
   // Existing quick price inputs
   document.querySelectorAll('.price-input').forEach(inp=>{
+    inp.addEventListener('focus', e=>{ e.target.dataset.before = e.target.value; });
     inp.addEventListener('input', e=>{
       products[e.target.dataset.idx].price = e.target.value;
     });
     inp.addEventListener('change', async e=>{
       const p = products[e.target.dataset.idx];
+      const before = e.target.dataset.before;
+      if(before !== undefined && before !== p.price) await logHistory({...p, price: before}, 'update');
       await sbClient.from('products').update({ price: p.price }).eq('id', p.id);
     });
   });
 
   document.querySelectorAll('.price2-input').forEach(inp=>{
+    inp.addEventListener('focus', e=>{ e.target.dataset.before = e.target.value; });
     inp.addEventListener('input', e=>{
       products[e.target.dataset.idx].price2 = e.target.value;
     });
     inp.addEventListener('change', async e=>{
       const p = products[e.target.dataset.idx];
+      const before = e.target.dataset.before;
+      if(before !== undefined && before !== p.price2) await logHistory({...p, price2: before}, 'update');
       await sbClient.from('products').update({ price2: p.price2 }).eq('id', p.id);
     });
   });
@@ -1246,6 +1371,7 @@ function render(){
       const idx = Number(e.target.dataset.idx);
       const p = products[idx];
       const hidden = e.target.checked;
+      await logHistory({...p}, 'update');
       const { error } = await sbClient.from('products').update({ hidden_pdf: hidden }).eq('id', p.id);
       if(error){
         alert('تغییر وضعیت PDF با خطا مواجه شد: ' + error.message);
@@ -1285,6 +1411,7 @@ function render(){
       if(!file) return;
       const reader = new FileReader();
       reader.onload = async ev=>{
+        await logHistory({...products[idx]}, 'update');
         products[idx].image = ev.target.result;
         const { error } = await sbClient.from('products')
           .update({ image_url: ev.target.result })
@@ -1304,7 +1431,8 @@ function render(){
     btn.addEventListener('click', async e=>{
       const idx = Number(e.target.dataset.idx);
       const p = products[idx];
-      if(confirm('این محصول از لیست حذف شود؟')){
+      if(confirm('این محصول از لیست حذف شود؟ (از «تاریخچه تغییرات» قابل بازگردانی است)')){
+        await logHistory({...p}, 'delete');
         const { error } = await sbClient.from('products').delete().eq('id', p.id);
         if(error){
           alert('حذف با خطا مواجه شد: ' + error.message);
@@ -1381,8 +1509,62 @@ function rowToProduct(row){
     price2: row.price2 || '0',
     image: row.image_url || null,
     brand: row.brand || 'عمومی',
+    category: row.category || '',
     hidden_pdf: !!row.hidden_pdf
   };
+}
+
+// ---------- manual backup export (CSV / JSON) ----------
+function downloadBlob(filename, content, mime){
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(value){
+  const s = String(value ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+
+function exportBackupJson(){
+  downloadBlob(
+    `backup-products-${Date.now()}.json`,
+    JSON.stringify(products, null, 2),
+    'application/json'
+  );
+}
+
+function exportBackupCsv(){
+  const headers = ['id','title','brand','category','size','price','price2','desc'];
+  const lines = [headers.join(',')];
+  products.forEach(p=>{
+    lines.push(headers.map(h => csvEscape(p[h])).join(','));
+  });
+  // leading BOM so Excel opens the Persian text correctly
+  downloadBlob(`backup-products-${Date.now()}.csv`, '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8;');
+}
+// Records a snapshot of a product BEFORE it is changed or deleted, so it can
+// be restored later from the "تاریخچه تغییرات" panel. Requires a
+// `product_history` table in Supabase (see setup notes) — if that table
+// doesn't exist yet, this silently no-ops and the main action still proceeds.
+async function logHistory(productSnapshot, actionType){
+  if(!sbClient) return;
+  try{
+    await sbClient.from('product_history').insert([{
+      product_id: productSnapshot.id ?? null,
+      title: productSnapshot.title || '',
+      action_type: actionType,
+      before_data: productSnapshot
+    }]);
+  } catch(err){
+    console.warn('ثبت تاریخچه با خطا مواجه شد (جدول product_history ساخته شده؟):', err.message);
+  }
 }
 
 async function loadProducts(){
@@ -1448,6 +1630,126 @@ document.getElementById('refreshBrandsBtn').addEventListener('click', ()=>{
   render();
 });
 
+// ---------- text search + category filter ----------
+document.getElementById('searchInput').addEventListener('input', e=>{
+  searchQuery = e.target.value;
+  render();
+});
+document.getElementById('categoryFilterSelect').addEventListener('change', e=>{
+  selectedCategory = e.target.value;
+  render();
+});
+
+// ---------- manual backup buttons ----------
+document.getElementById('backupJsonBtn').addEventListener('click', exportBackupJson);
+document.getElementById('backupCsvBtn').addEventListener('click', exportBackupCsv);
+
+// ---------- change history modal ----------
+function openHistoryModal(){
+  document.getElementById('historyModal').classList.add('open');
+  loadHistoryList();
+}
+function closeHistoryModal(){
+  document.getElementById('historyModal').classList.remove('open');
+}
+document.getElementById('historyBtn').addEventListener('click', openHistoryModal);
+document.getElementById('closeHistoryBtn').addEventListener('click', closeHistoryModal);
+document.getElementById('historyModal').addEventListener('click', e=>{
+  if(e.target.id === 'historyModal') closeHistoryModal();
+});
+
+let lastHistoryRows = [];
+
+async function loadHistoryList(){
+  const box = document.getElementById('historyList');
+  box.innerHTML = '<p style="text-align:center;color:var(--ink-soft);padding:16px;">در حال بارگذاری...</p>';
+  if(!sbClient) return;
+
+  const { data, error } = await sbClient
+    .from('product_history')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if(error){
+    box.innerHTML = `<p style="text-align:center;color:var(--danger);padding:16px;line-height:2;">
+      جدول تاریخچه هنوز آماده نیست یا خطایی رخ داد:<br>${escapeHtml(error.message)}<br><br>
+      برای فعال‌سازی این قابلیت باید یک‌بار جدول <code>product_history</code> در Supabase ساخته شود.
+    </p>`;
+    return;
+  }
+
+  lastHistoryRows = data || [];
+
+  if(lastHistoryRows.length === 0){
+    box.innerHTML = '<p style="text-align:center;color:var(--ink-soft);padding:16px;">هنوز تغییری ثبت نشده است.</p>';
+    return;
+  }
+
+  box.innerHTML = lastHistoryRows.map(row=>{
+    const when = new Date(row.created_at).toLocaleString('fa-IR');
+    const actionLabel = row.action_type === 'delete' ? 'حذف محصول' : 'ویرایش محصول';
+    return `
+      <div class="history-row">
+        <div class="history-info">
+          <div class="history-title">${escapeHtml(row.title || '(بدون عنوان)')}</div>
+          <div class="history-meta">${actionLabel} — ${when}</div>
+        </div>
+        <button type="button" class="mini-btn restore-history-btn" data-hid="${row.id}">بازگردانی</button>
+      </div>
+    `;
+  }).join('');
+
+  box.querySelectorAll('.restore-history-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>restoreHistory(Number(btn.dataset.hid)));
+  });
+}
+
+async function restoreHistory(historyId){
+  const row = lastHistoryRows.find(r => r.id === historyId);
+  if(!row) return;
+  if(!confirm('این نسخه‌ی قبلی بازگردانی شود؟')) return;
+
+  const before = row.before_data || {};
+  const patch = {
+    title: before.title || '',
+    desc: before.desc || '',
+    spec: before.spec || [],
+    size: before.size || '-',
+    price: before.price || '0',
+    price2: before.price2 || '0',
+    brand: before.brand || 'عمومی',
+    category: before.category || '',
+    hidden_pdf: !!before.hidden_pdf
+  };
+
+  const existing = products.find(p => p.id === before.id);
+
+  if(existing && row.action_type !== 'delete'){
+    // product still exists — write the saved values back onto it
+    let { error } = await sbClient.from('products').update(patch).eq('id', before.id);
+    if(error && /category/i.test(error.message)){
+      const { category, ...patchNoCategory } = patch;
+      ({ error } = await sbClient.from('products').update(patchNoCategory).eq('id', before.id));
+    }
+    if(error){ alert('بازگردانی با خطا مواجه شد: ' + error.message); return; }
+    Object.assign(existing, patch, { image: before.image ?? existing.image });
+  } else {
+    // product row is gone (deleted, or its id no longer exists) — recreate it
+    const insertRow = { ...patch, image_url: before.image || null };
+    let { data, error } = await sbClient.from('products').insert([insertRow]).select();
+    if(error && /category/i.test(error.message)){
+      const { category, ...rowNoCategory } = insertRow;
+      ({ data, error } = await sbClient.from('products').insert([rowNoCategory]).select());
+    }
+    if(error){ alert('بازگردانی با خطا مواجه شد: ' + error.message); return; }
+    products.push(rowToProduct(data[0]));
+  }
+
+  closeHistoryModal();
+  render();
+}
+
 
 document.getElementById('closeEditorBtn').addEventListener('click', closeEditor);
 document.getElementById('cancelEditorBtn').addEventListener('click', closeEditor);
@@ -1467,6 +1769,7 @@ document.getElementById('saveEditorBtn').addEventListener('click', async ()=>{
   const patch = {
     title: document.getElementById('editTitle').value.trim(),
     brand: document.getElementById('editBrand').value.trim() || 'عمومی',
+    category: document.getElementById('editCategory').value.trim(),
     desc: document.getElementById('editDesc').value.trim(),
     size: document.getElementById('editSize').value.trim() || '-',
     price: document.getElementById('editPrice').value.trim() || '0',
@@ -1479,7 +1782,15 @@ document.getElementById('saveEditorBtn').addEventListener('click', async ()=>{
     return;
   }
 
-  const { error } = await sbClient.from('products').update(patch).eq('id', p.id);
+  await logHistory({...p}, 'update');
+
+  let { error } = await sbClient.from('products').update(patch).eq('id', p.id);
+  if(error && /category/i.test(error.message)){
+    // "category" column not created in Supabase yet — save everything else
+    // anyway and skip just that field, so a missed setup step doesn't block editing.
+    const { category, ...patchNoCategory } = patch;
+    ({ error } = await sbClient.from('products').update(patchNoCategory).eq('id', p.id));
+  }
   if(error){
     alert('ذخیره تغییرات با خطا مواجه شد: ' + error.message);
     return;
@@ -1529,6 +1840,7 @@ async function addProductToList(imageDataUrl){
   const price = document.getElementById('newPrice').value.trim() || '0';
   const price2 = document.getElementById('newPrice2').value.trim() || '0';
   const brand = document.getElementById('newBrand').value.trim() || 'عمومی';
+  const category = document.getElementById('newCategory').value.trim();
 
   const spec = specRaw.split('\n').filter(l=>l.trim()).map(line=>{
     const [label, ...rest] = line.split(':');
@@ -1536,10 +1848,18 @@ async function addProductToList(imageDataUrl){
   });
   if(spec.length === 0) spec.push({label:'مشخصات', value:'-'});
 
-  const { data, error } = await sbClient.from('products').insert([{
+  const newRow = {
     title, desc, spec, size, price, price2, image_url: imageDataUrl || null,
-    brand, hidden_pdf: false
-  }]).select();
+    brand, category, hidden_pdf: false
+  };
+
+  let { data, error } = await sbClient.from('products').insert([newRow]).select();
+  if(error && /category/i.test(error.message)){
+    // "category" column not created in Supabase yet — add the product
+    // anyway without it, so a missed setup step doesn't block adding items.
+    const { category, ...rowNoCategory } = newRow;
+    ({ data, error } = await sbClient.from('products').insert([rowNoCategory]).select());
+  }
 
   if(error){
     alert('افزودن محصول با خطا مواجه شد: ' + error.message);
@@ -1552,6 +1872,7 @@ async function addProductToList(imageDataUrl){
   // reset form
   document.getElementById('newTitle').value = '';
   document.getElementById('newBrand').value = '';
+  document.getElementById('newCategory').value = '';
   document.getElementById('newDesc').value = '';
   document.getElementById('newSpec').value = '';
   document.getElementById('newSize').value = '';
