@@ -1650,7 +1650,9 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       if(coverImg){
         const coverContainer = document.createElement('div');
         coverContainer.style.cssText = 'position:fixed;left:-99999px;top:0;width:800px;background:#fff;';
-        coverContainer.appendChild(coverImg.cloneNode(true));
+        const coverClone = coverEl.cloneNode(true); // keeps class="pdf-cover-page" so its CSS still applies
+        coverClone.removeAttribute('id');
+        coverContainer.appendChild(coverClone);
         const { dataUrl, wMm, hMm } = await captureToImage(coverContainer, PAGE_W, PAGE_H);
         pdf.addImage(dataUrl, 'JPEG', (PAGE_W - wMm) / 2, (PAGE_H - hMm) / 2, wMm, hMm);
         firstPage = false;
