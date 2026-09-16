@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -605,19 +606,6 @@
   body.exporting .img-col{flex:0 0 102px; width:102px;}
   body.exporting .img-box{width:102px; height:102px; border-radius:10px;}
   body.exporting .card-footer{gap:9px;}
-
-  /* header repeated at the top of each PDF page */
-  .repeated-header{display:none;}
-  body.exporting .repeated-header{
-    display:flex !important;
-    margin-top:0;
-  }
-
-  /* forced break after every 5th product */
-  .pdf-page-break{
-    page-break-after:always;
-    break-after:page;
-  }
 </style>
 </head>
 <body class="locked">
@@ -1591,88 +1579,120 @@ document.getElementById('confirmAddBtn').addEventListener('click', ()=>{
 
 // ---------- export to PDF ----------
 document.getElementById('exportBtn').addEventListener('click', async ()=>{
-  const sheet = document.getElementById('sheet');
-  const hiddenCards = [];
-  document.querySelectorAll('#cards .card').forEach(card=>{
-    const idx = Number(card.querySelector('.hidden-pdf-toggle')?.dataset.idx);
-    const p = products[idx];
-    if(p && p.hidden_pdf){
-      hiddenCards.push(card);
-      card.dataset.pdfHidden = '1';
-    }
-  });
+  const exportBtn = document.getElementById('exportBtn');
+  const originalBtnText = exportBtn.textContent;
+  exportBtn.disabled = true;
+  exportBtn.textContent = 'در حال ساخت PDF...';
 
-  hiddenCards.forEach(card=>card.style.display='none');
   document.body.classList.add('exporting');
   closeEditor();
 
-  const PER_PAGE = 4;
-  const headerEl = document.querySelector('.brand-header');
+  try {
+    const PAGE_W = 210, PAGE_H = 297; // A4, mm
+    const MARGIN = 8; // mm
+    const CONTENT_W = PAGE_W - MARGIN * 2;
+    const CONTENT_H = PAGE_H - MARGIN * 2;
+    const PER_PAGE = 4;
 
-  // force a page break after every 4th card that will actually be printed,
-  // and repeat the header at the top of each following page
-  const printedCards = [...document.querySelectorAll('#cards .card')]
-    .filter(card => card.style.display !== 'none');
-  const injectedHeaders = [];
+    const headerEl = document.querySelector('.brand-header');
+    const coverEl = document.getElementById('pdfCoverPage');
+    const contentWidthPx = document.getElementById('sheet').getBoundingClientRect().width;
 
-  printedCards.forEach((card, i)=>{
-    if((i + 1) % PER_PAGE === 0 && i !== printedCards.length - 1){
-      card.classList.add('pdf-page-break');
-      const clone = headerEl.cloneNode(true);
-      clone.classList.add('repeated-header');
-      // strip ids from the clone so they stay unique in the document
-      clone.removeAttribute('id');
-      clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
-      card.insertAdjacentElement('afterend', clone);
-      injectedHeaders.push(clone);
-    }
-  });
-
-  function cleanup(){
-    hiddenCards.forEach(card=>card.style.display='');
-    printedCards.forEach(card=>card.classList.remove('pdf-page-break'));
-    injectedHeaders.forEach(el=>el.remove());
-    document.body.classList.remove('exporting');
-  }
-
-  // Freshly-injected clones (and the exporting-mode compact styles) need a
-  // real layout + paint pass before html2canvas photographs them, otherwise
-  // the browser can capture them half-rendered — this shows up as a
-  // repeated header with the background/text missing on some machines.
-  // Force a synchronous reflow, wait for every image to finish decoding,
-  // then give the browser two paint frames before starting the capture.
-  injectedHeaders.forEach(el => el.offsetHeight); // force reflow
-
-  const images = [...sheet.querySelectorAll('img')];
-  await Promise.all(images.map(img=>{
-    if(img.complete) return Promise.resolve();
-    if(img.decode) return img.decode().catch(()=>{});
-    return new Promise(resolve=>{
-      img.addEventListener('load', resolve, { once:true });
-      img.addEventListener('error', resolve, { once:true });
+    // Only export cards that are currently shown (respects brand/category
+    // filters) and not explicitly marked "hidden in PDF".
+    const cardEls = [...document.querySelectorAll('#cards .card')].filter(card=>{
+      const prod = products.find(x => String(x.id) === String(card.dataset.id));
+      return !(prod && prod.hidden_pdf);
     });
-  }));
 
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // Wait for every image to finish decoding and for fonts to be ready,
+    // so nothing gets photographed half-rendered.
+    async function waitForRender(container){
+      const imgs = [...container.querySelectorAll('img')];
+      await Promise.all(imgs.map(img=>{
+        if(img.complete) return Promise.resolve();
+        if(img.decode) return img.decode().catch(()=>{});
+        return new Promise(resolve=>{
+          img.addEventListener('load', resolve, { once:true });
+          img.addEventListener('error', resolve, { once:true });
+        });
+      }));
+      if(document.fonts && document.fonts.ready){
+        try { await document.fonts.ready; } catch(err){ /* ignore */ }
+      }
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
 
-  if(document.fonts && document.fonts.ready){
-    try { await document.fonts.ready; } catch(err){ /* ignore, proceed anyway */ }
-  }
+    // Renders one off-screen container, captures it, and returns the
+    // resulting image sized in mm to fit within the given box (never cropped).
+    async function captureToImage(container, maxWmm, maxHmm){
+      document.body.appendChild(container);
+      await waitForRender(container);
+      container.offsetHeight; // force reflow
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor:'#ffffff' });
+      container.remove();
 
-  const opt = {
-    margin:       [8,8,8,8],
-    filename:     'لیست-قیمت-تامین-نهاده-ایران.pdf',
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: ['legacy'], after: ['.pdf-page-break', '.pdf-cover-page'], avoid: '.card' }
-  };
+      let wMm = maxWmm;
+      let hMm = canvas.height * (wMm / canvas.width);
+      if(hMm > maxHmm){
+        hMm = maxHmm;
+        wMm = canvas.width * (hMm / canvas.height);
+      }
+      return { dataUrl: canvas.toDataURL('image/jpeg', 0.95), wMm, hMm };
+    }
 
-  html2pdf().set(opt).from(sheet).save().then(cleanup).catch((err)=>{
-    cleanup();
+    const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    let firstPage = true;
+
+    // ---- Page 1: cover image, full bleed ----
+    if(coverEl){
+      const coverImg = coverEl.querySelector('img');
+      if(coverImg){
+        const coverContainer = document.createElement('div');
+        coverContainer.style.cssText = 'position:fixed;left:-99999px;top:0;width:800px;background:#fff;';
+        coverContainer.appendChild(coverImg.cloneNode(true));
+        const { dataUrl, wMm, hMm } = await captureToImage(coverContainer, PAGE_W, PAGE_H);
+        pdf.addImage(dataUrl, 'JPEG', (PAGE_W - wMm) / 2, (PAGE_H - hMm) / 2, wMm, hMm);
+        firstPage = false;
+      }
+    }
+
+    // ---- Content pages: header + up to 4 products per page ----
+    for(let i = 0; i < cardEls.length; i += PER_PAGE){
+      const chunk = cardEls.slice(i, i + PER_PAGE);
+
+      const container = document.createElement('div');
+      container.style.cssText = `position:fixed;left:-99999px;top:0;width:${contentWidthPx}px;background:#fff;padding:0 8px 8px;`;
+
+      const headerClone = headerEl.cloneNode(true);
+      headerClone.removeAttribute('id');
+      headerClone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+      container.appendChild(headerClone);
+
+      chunk.forEach(card=>{
+        const clone = card.cloneNode(true);
+        clone.removeAttribute('id');
+        clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+        container.appendChild(clone);
+      });
+
+      const { dataUrl, wMm, hMm } = await captureToImage(container, CONTENT_W, CONTENT_H);
+
+      if(!firstPage) pdf.addPage();
+      pdf.addImage(dataUrl, 'JPEG', MARGIN, MARGIN, wMm, hMm);
+      firstPage = false;
+    }
+
+    pdf.save('لیست-قیمت-تامین-نهاده-ایران.pdf');
+  } catch(err){
     alert('ساخت PDF با خطا مواجه شد: ' + err.message);
-  });
+  } finally {
+    document.body.classList.remove('exporting');
+    exportBtn.disabled = false;
+    exportBtn.textContent = originalBtnText;
+  }
 });
+
 </script>
 </body>
 </html>
