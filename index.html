@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -980,6 +981,18 @@
         <button class="btn btn-ghost" id="backupJsonBtn" style="width:100%;color:#333;background:#eef5ef;">⬇ بک‌آپ JSON</button>
         <button class="btn btn-ghost" id="backupCsvBtn" style="width:100%;color:#333;background:#eef5ef;">⬇ بک‌آپ CSV</button>
       </div>
+
+      <div class="filter-section">
+        <label>وارد کردن محصولات از CSV:</label>
+        <button class="btn btn-ghost" id="downloadCsvTemplateBtn" style="width:100%;color:#333;background:#eef5ef;">⬇ دانلود فایل نمونه CSV</button>
+        <label class="btn btn-ghost" id="importCsvLabel" style="width:100%;color:#333;background:#eef5ef;text-align:center;display:block;cursor:pointer;box-sizing:border-box;">
+          📤 بارگذاری از فایل CSV
+          <input type="file" id="importCsvInput" accept=".csv,text/csv" style="display:none;">
+        </label>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin:6px 0 0;line-height:1.8;">
+          ابتدا فایل نمونه رو دانلود کن، طبق همون ستون‌ها محصولات رو توی اکسل یا گوگل‌شیت پر کن، بعد همون فایل رو اینجا بارگذاری کن.
+        </p>
+      </div>
     </div>
 
     <div id="cards"></div>
@@ -1808,6 +1821,95 @@ function exportBackupCsv(){
   // leading BOM so Excel opens the Persian text correctly
   downloadBlob(`backup-products-${Date.now()}.csv`, '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8;');
 }
+
+// ---------- bulk import from CSV ----------
+function downloadCsvTemplate(){
+  const headers = ['title','brand','category','size','price','price2','desc','spec'];
+  const sampleRow = [
+    'LIFE 15 15 30', 'LIFE', 'کود گرانوله', '25kg', '1,200,000', '1,100,000',
+    'مثال توضیحات محصول اینجا نوشته می‌شود.',
+    'نیتروژن:15%|فسفر:15%|پتاسیم:30%'
+  ];
+  const lines = [headers.join(','), sampleRow.map(csvEscape).join(',')];
+  downloadBlob('نمونه-وارد-کردن-محصولات.csv', '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8;');
+}
+
+// "نیتروژن:15%|فسفر:15%" -> [{label:'نیتروژن',value:'15%'}, ...]
+function parseSpecCell(raw){
+  if(!raw || !raw.trim()) return [];
+  return raw.split('|').map(part=>{
+    const [label, ...rest] = part.split(':');
+    return { label: (label||'').trim() || '-', value: rest.join(':').trim() || '-' };
+  }).filter(s => s.label !== '-' || s.value !== '-');
+}
+
+async function importProductsFromCsv(file){
+  const importBtn = document.getElementById('importCsvLabel');
+  const originalText = importBtn.textContent;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async (results)=>{
+      const rows = results.data;
+      if(!rows.length){
+        alert('فایل خالی است یا هیچ ردیف قابل‌خواندنی در آن پیدا نشد.');
+        return;
+      }
+
+      const rowsToInsert = [];
+      const skipped = [];
+      rows.forEach((row, i)=>{
+        const title = (row.title || '').trim();
+        if(!title){
+          skipped.push(i + 2); // +2: header row + 1-index
+          return;
+        }
+        rowsToInsert.push({
+          title,
+          brand: (row.brand || '').trim() || 'عمومی',
+          category: (row.category || '').trim() || 'عمومی',
+          size: (row.size || '').trim() || '-',
+          price: (row.price || '').trim() || '0',
+          price2: (row.price2 || '').trim() || '0',
+          desc: (row.desc || '').trim(),
+          spec: parseSpecCell(row.spec || ''),
+          image_url: null,
+          hidden_pdf: false
+        });
+      });
+
+      if(!rowsToInsert.length){
+        alert('هیچ ردیف معتبری پیدا نشد. ستون «title» (نام محصول) در همه‌ی ردیف‌ها خالی است.');
+        return;
+      }
+
+      const confirmMsg = skipped.length
+        ? `${rowsToInsert.length} محصول معتبر پیدا شد (${skipped.length} ردیف بدون نام محصول نادیده گرفته شد: ردیف‌های ${skipped.join('، ')}).\n\nاضافه شوند؟`
+        : `${rowsToInsert.length} محصول پیدا شد. همه به لیست اضافه شوند؟`;
+      if(!confirm(confirmMsg)) return;
+
+      importBtn.textContent = 'در حال بارگذاری...';
+      try {
+        const { data, error } = await sbClient.from('products').insert(rowsToInsert).select();
+        if(error){
+          alert('بارگذاری با خطا مواجه شد: ' + error.message);
+          return;
+        }
+        data.forEach(row => products.push(rowToProduct(row)));
+        render();
+        alert(`${data.length} محصول با موفقیت اضافه شد.`);
+      } catch(err){
+        alert('بارگذاری با خطا مواجه شد: ' + err.message);
+      } finally {
+        importBtn.textContent = originalText;
+      }
+    },
+    error: (err)=>{
+      alert('خواندن فایل CSV با خطا مواجه شد: ' + err.message);
+    }
+  });
+}
 // Records a snapshot of a product BEFORE it is changed or deleted, so it can
 // be restored later from the "تاریخچه تغییرات" panel. Requires a
 // `product_history` table in Supabase (see setup notes) — if that table
@@ -1902,6 +2004,13 @@ document.getElementById('categoryFilterSelect').addEventListener('change', e=>{
 // ---------- manual backup buttons ----------
 document.getElementById('backupJsonBtn').addEventListener('click', exportBackupJson);
 document.getElementById('backupCsvBtn').addEventListener('click', exportBackupCsv);
+document.getElementById('downloadCsvTemplateBtn').addEventListener('click', downloadCsvTemplate);
+document.getElementById('importCsvInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  importProductsFromCsv(file);
+  e.target.value = ''; // allow re-selecting the same file later
+});
 
 // ---------- change history modal ----------
 function openHistoryModal(){
