@@ -507,13 +507,76 @@
     padding-top:12px;
     border-top:1px solid var(--line);
   }
-  /* ---------- toolbar search + category filter ---------- */
-  .toolbar-group{
+  /* ---------- floating filter icon + fixed right-side panel ---------- */
+  .filter-fab{
+    position:fixed;
+    top:130px;
+    right:20px;
+    z-index:80;
+    width:54px;
+    height:54px;
+    border-radius:50%;
+    border:none;
+    background:var(--brand);
+    color:#fff;
+    font-size:22px;
+    line-height:1;
     display:flex;
     align-items:center;
-    gap:10px;
-    flex-wrap:nowrap;
+    justify-content:center;
+    cursor:pointer;
+    box-shadow:0 6px 18px rgba(20,80,50,.35);
   }
+  .filter-fab:hover{background:var(--brand-dark);}
+  .filter-panel{
+    position:fixed;
+    top:0;
+    right:-380px;
+    width:340px;
+    max-width:88vw;
+    height:100vh;
+    background:#fff;
+    box-shadow:-10px 0 30px rgba(0,0,0,.2);
+    z-index:90;
+    overflow-y:auto;
+    padding:18px 18px 26px;
+    transition:right .25s ease;
+  }
+  .filter-panel.open{right:0;}
+  .filter-panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    position:sticky;
+    top:-18px;
+    background:#fff;
+    padding:4px 0 12px;
+    margin-bottom:14px;
+    border-bottom:1px solid var(--line);
+    z-index:2;
+  }
+  .filter-panel-head h4{margin:0;font-size:15px;color:var(--brand-dark);}
+  .filter-section{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:8px;
+    padding-bottom:16px;
+    margin-bottom:16px;
+    border-bottom:1px solid var(--line);
+  }
+  .filter-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .filter-section label, .filter-section .global-toggles-label{font-size:13px;font-weight:600;color:var(--brand-dark);}
+  .filter-panel #searchInput,
+  .filter-panel #categoryFilterSelect,
+  .filter-panel .brand-multi,
+  .filter-panel .brand-multi-trigger{
+    width:100%;
+    min-width:0;
+  }
+  .filter-panel .brand-multi-panel{width:100%; min-width:0;}
+
   .toolbar-input{
     padding:9px 12px;
     border:1px solid var(--line);
@@ -566,16 +629,16 @@
   body:not(.locked) #loginOverlay{display:none;}
 
   @media print{
-    .toolbar, #addForm, #addFormOverlay, .del-btn, .global-toggles, .img-upload-label, .editor-toolbar, .card-actions, .editor-modal, #loginOverlay, .brand-chip, .category-chip, .drag-handle, .logo-placeholder-label{display:none !important;}
+    .toolbar, #addForm, #addFormOverlay, .del-btn, .filter-fab, .filter-panel, .img-upload-label, .card-actions, .editor-modal, #loginOverlay, .brand-chip, .category-chip, .drag-handle, .logo-placeholder-label{display:none !important;}
     body{background:#fff;}
   }
   body.exporting .toolbar,
   body.exporting #addForm,
   body.exporting #addFormOverlay,
   body.exporting .del-btn,
-  body.exporting .global-toggles,
+  body.exporting .filter-fab,
+  body.exporting .filter-panel,
   body.exporting .img-upload-label,
-  body.exporting .editor-toolbar,
   body.exporting .card-actions,
   body.exporting .editor-modal,
   body.exporting .brand-chip,
@@ -657,10 +720,8 @@
     .brand-header .contact{direction:ltr; align-items:center;}
     .brand-header .contact div{justify-content:center;}
     .brand-header .org-name{text-align:center;}
-    .global-toggles{flex-direction:column; align-items:flex-start; gap:10px;}
-    .editor-toolbar{flex-direction:column; align-items:stretch;}
-    .toolbar-group{width:100%;}
-    .brand-multi-trigger, #searchInput, #categoryFilterSelect{min-width:0; width:100%;}
+    .filter-fab{top:auto; bottom:18px; right:16px;}
+    .filter-panel{width:100vw; max-width:100vw;}
     .card{padding:14px;}
     .card-body{flex-direction:column-reverse;}
     .img-col{width:100%; flex:0 0 auto; flex-direction:row; justify-content:center;}
@@ -727,26 +788,32 @@
       <h2 class="org-name">سازمان تأمین نهاده ایران</h2>
     </div>
 
-    <div class="global-toggles">
-      <span class="global-toggles-label">نمایش قیمت‌ها در کل لیست:</span>
-      <label class="price-toggle">
-        <input type="checkbox" id="globalShowPrice" checked>
-        قیمت مصرف‌کننده
-      </label>
-      <label class="price-toggle">
-        <input type="checkbox" id="globalShowPrice2" checked>
-        قیمت همکاری
-      </label>
-    </div>
+    <button type="button" id="filterFab" class="filter-fab" aria-label="نمایش گزینه‌های نمایش و فیلتر" title="گزینه‌های نمایش و فیلتر">⚙</button>
 
+    <div id="filterPanel" class="filter-panel">
+      <div class="filter-panel-head">
+        <h4>نمایش و فیلتر</h4>
+        <button type="button" class="close-editor" id="closeFilterPanelBtn">×</button>
+      </div>
 
-    <div class="editor-toolbar">
-      <div class="toolbar-group">
+      <div class="filter-section">
+        <span class="global-toggles-label">نمایش قیمت‌ها در کل لیست:</span>
+        <label class="price-toggle">
+          <input type="checkbox" id="globalShowPrice" checked>
+          قیمت مصرف‌کننده
+        </label>
+        <label class="price-toggle">
+          <input type="checkbox" id="globalShowPrice2" checked>
+          قیمت همکاری
+        </label>
+      </div>
+
+      <div class="filter-section">
         <label>جستجو:</label>
         <input type="text" id="searchInput" class="toolbar-input" placeholder="نام، توضیحات یا برند...">
       </div>
 
-      <div class="toolbar-group">
+      <div class="filter-section">
         <label>فیلتر برند:</label>
         <div class="brand-multi" id="brandMulti">
           <button type="button" class="brand-multi-trigger" id="brandMultiTrigger">
@@ -764,15 +831,20 @@
         </div>
       </div>
 
-      <div class="toolbar-group">
+      <div class="filter-section">
         <label>نوع محصول:</label>
         <select id="categoryFilterSelect" class="toolbar-input">
           <option value="">همه دسته‌ها</option>
         </select>
       </div>
 
-      <button class="btn btn-ghost" id="refreshBrandsBtn" style="color:#333;background:#eef5ef;">به‌روزرسانی فهرست برندها</button>
-      <span id="productCount" style="font-size:12.5px;color:var(--ink-soft);"></span>
+      <div class="filter-section">
+        <button class="btn btn-ghost" id="refreshBrandsBtn" style="width:100%;color:#333;background:#eef5ef;">به‌روزرسانی فهرست برندها</button>
+      </div>
+
+      <div class="filter-section">
+        <span id="productCount" style="font-size:12.5px;color:var(--ink-soft);"></span>
+      </div>
     </div>
 
     <div id="cards"></div>
@@ -1665,6 +1737,17 @@ function openHistoryModal(){
 function closeHistoryModal(){
   document.getElementById('historyModal').classList.remove('open');
 }
+// ---------- floating filter panel (display/search/brand/category) ----------
+// Opens/closes only via explicit clicks on the icon or the close button —
+// no outside-click or scroll listener, so it stays open until the user
+// closes it themselves.
+document.getElementById('filterFab').addEventListener('click', ()=>{
+  document.getElementById('filterPanel').classList.toggle('open');
+});
+document.getElementById('closeFilterPanelBtn').addEventListener('click', ()=>{
+  document.getElementById('filterPanel').classList.remove('open');
+});
+
 document.getElementById('historyBtn').addEventListener('click', openHistoryModal);
 document.getElementById('closeHistoryBtn').addEventListener('click', closeHistoryModal);
 document.getElementById('historyModal').addEventListener('click', e=>{
