@@ -20,6 +20,7 @@
     --ink-soft:#5b6b62;
     --line:#d8e1db;
     --danger:#c0392b;
+    --heading:#0f4d33;
   }
   *{box-sizing:border-box;}
   body{
@@ -128,7 +129,7 @@
   .card-main{flex:1 1 auto; min-width:0;}
   .card-top{display:flex; align-items:flex-start; justify-content:space-between; gap:14px;}
   .card h3{
-    font-size:18px; font-weight:700; color:var(--brand-dark);
+    font-size:18px; font-weight:700; color:var(--heading);
     margin:0 0 10px; padding-bottom:8px; border-bottom:2px solid var(--brand-light);
     display:inline-block;
   }
@@ -153,7 +154,7 @@
   .img-box img{width:100%; height:100%; object-fit:cover; display:block;}
   .img-box .placeholder{font-size:12px; color:var(--ink-soft); text-align:center; padding:6px;}
   .img-upload-label{
-    font-size:11.5px; font-weight:600; color:var(--brand-dark);
+    font-size:11.5px; font-weight:600; color:var(--heading);
     background:#e7f4ec; border:1px solid var(--brand-light);
     border-radius:8px; padding:5px 10px; cursor:pointer; text-align:center;
   }
@@ -165,12 +166,12 @@
   table.spec th, table.spec td{
     border:1px solid var(--line); padding:8px 6px; text-align:center;
   }
-  table.spec th{background:#f2f7f4; color:var(--brand-dark); font-weight:700;}
+  table.spec th{background:#f2f7f4; color:var(--heading); font-weight:700;}
 
   .card-footer{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
   .prices{display:flex; flex-direction:row; align-items:center; gap:18px; flex-wrap:wrap;}
   .price-line{
-    display:flex; align-items:center; gap:8px; font-weight:700; color:var(--brand-dark); font-size:15px;
+    display:flex; align-items:center; gap:8px; font-weight:700; color:var(--heading); font-size:15px;
   }
   .price-label{
     unicode-bidi:isolate;
@@ -180,7 +181,7 @@
   .price-line.wholesale{color:#8a5a10;}
   .price-line input{
     width:150px; text-align:center; font-family:inherit; font-weight:700; font-size:15px;
-    color:var(--brand-dark); border:1.5px solid var(--brand-light); border-radius:8px;
+    color:var(--heading); border:1.5px solid var(--brand-light); border-radius:8px;
     padding:6px 8px; background:#f7fbf9;
   }
   .price-line.wholesale input{color:#8a5a10; border-color:#e0b25a; background:#fdf6e9;}
@@ -192,7 +193,7 @@
     background:#fff; border:1px solid var(--line); border-radius:12px;
     padding:12px 18px; margin-bottom:20px;
   }
-  .global-toggles-label{font-size:13px; font-weight:600; color:var(--brand-dark);}
+  .global-toggles-label{font-size:13px; font-weight:600; color:var(--heading);}
   .price-toggle{
     display:flex; align-items:center; gap:5px; font-size:12.5px; font-weight:500;
     color:var(--ink-soft); cursor:pointer; user-select:none;
@@ -257,7 +258,7 @@
     margin-bottom:14px; position:sticky; top:-20px; background:var(--card);
     padding:6px 0 10px; border-bottom:1px solid var(--line);
   }
-  #addForm h4{margin:0; color:var(--brand-dark); font-size:16px;}
+  #addForm h4{margin:0; color:var(--heading); font-size:16px;}
   #addForm .close-addform{
     border:none; background:#eee; border-radius:8px; cursor:pointer;
     font-size:18px; width:32px; height:32px; flex-shrink:0;
@@ -288,7 +289,7 @@
   .editor-toolbar label{
     font-size:13px;
     font-weight:600;
-    color:var(--brand-dark);
+    color:var(--heading);
   }
   /* ---------- multi-select brand filter ---------- */
   .brand-multi{position:relative;}
@@ -337,11 +338,11 @@
   }
   .brand-opt:hover{background:#f2f7f4;}
   .brand-opt input{width:15px;height:15px;accent-color:var(--brand);cursor:pointer;}
-  .brand-opt-all{font-weight:700;color:var(--brand-dark);}
+  .brand-opt-all{font-weight:700;color:var(--heading);}
   .brand-opt-divider{height:1px;background:var(--line);margin:6px 2px;}
   .edit-btn{
     background:#eef5ef;
-    color:var(--brand-dark);
+    color:#0f4d33;
     border:1px solid #c9ded0;
     border-radius:8px;
     padding:6px 12px;
@@ -365,7 +366,7 @@
     gap:7px;
     font-size:12.5px;
     font-weight:700;
-    color:var(--brand-dark);
+    color:var(--heading);
     cursor:pointer;
   }
   .pdf-toggle input{width:16px;height:16px;accent-color:var(--brand);}
@@ -375,7 +376,7 @@
     gap:5px;
     font-size:11px;
     background:#eef6f1;
-    color:var(--brand-dark);
+    color:var(--heading);
     border:1px solid #cfe3d5;
     border-radius:999px;
     padding:4px 9px;
@@ -441,7 +442,7 @@
   }
   .editor-panel-head h4{
     margin:0;
-    color:var(--brand-dark);
+    color:var(--heading);
     font-size:18px;
   }
   .close-editor{
@@ -505,7 +506,7 @@
     font-family:inherit;
     font-size:11px;
   }
-  .mini-btn.save{background:#e7f4ec;border-color:var(--brand-light);color:var(--brand-dark);font-weight:700;}
+  .mini-btn.save{background:#e7f4ec;border-color:var(--brand-light);color:#0f4d33;font-weight:700;}
   .mini-btn.remove{background:#fdecea;color:var(--danger);border-color:#f3c6c1;}
   .editor-panel-actions{
     display:flex;
@@ -564,7 +565,7 @@
     border-bottom:1px solid var(--line);
     z-index:2;
   }
-  .filter-panel-head h4{margin:0;font-size:15px;color:var(--brand-dark);}
+  .filter-panel-head h4{margin:0;font-size:15px;color:var(--heading);}
   .filter-section{
     display:flex;
     flex-direction:column;
@@ -575,7 +576,7 @@
     border-bottom:1px solid var(--line);
   }
   .filter-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
-  .filter-section label, .filter-section .global-toggles-label{font-size:13px;font-weight:600;color:var(--brand-dark);}
+  .filter-section label, .filter-section .global-toggles-label{font-size:13px;font-weight:600;color:var(--heading);}
   .filter-panel #searchInput,
   .filter-panel #categoryFilterSelect,
   .filter-panel .brand-multi,
@@ -621,14 +622,14 @@
     box-shadow:0 20px 60px rgba(0,0,0,.28);
     text-align:right;
   }
-  .login-box h2{margin:0 0 8px;color:var(--brand-dark);font-size:22px;}
-  .login-box p{margin:0 0 20px;color:var(--ink-soft);font-size:13px;line-height:1.9;}
+  .login-box h2{margin:0 0 8px;color:#0f4d33;font-size:22px;}
+  .login-box p{margin:0 0 20px;color:#5b6b62;font-size:13px;line-height:1.9;}
   .login-field{margin-bottom:13px;}
-  .login-field label{display:block;margin-bottom:5px;color:var(--brand-dark);font-size:12.5px;font-weight:700;}
+  .login-field label{display:block;margin-bottom:5px;color:#0f4d33;font-size:12.5px;font-weight:700;}
   .login-field input{
     width:100%; box-sizing:border-box; padding:11px 12px;
     border:1px solid var(--line); border-radius:9px;
-    background:#fbfcfb; font-family:inherit; font-size:14px;
+    background:#fbfcfb; color:#1a2420; font-family:inherit; font-size:14px;
     direction:ltr; text-align:left; outline:none;
   }
   .login-field input:focus{border-color:var(--brand-light);box-shadow:0 0 0 2px rgba(47,174,116,.12);}
@@ -716,7 +717,7 @@
     padding:11px 4px; border-bottom:1px solid var(--line);
   }
   .history-row:last-child{border-bottom:none;}
-  .history-title{font-size:13.5px; font-weight:700; color:var(--brand-dark);}
+  .history-title{font-size:13.5px; font-weight:700; color:var(--heading);}
   .history-meta{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
 
   /* ---------- dark theme ---------- */
@@ -730,6 +731,7 @@
     --ink-soft:#a7b3c6;
     --line:#26324a;
     --danger:#ff7a6e;
+    --heading:#eaf2ff;
     background:var(--paper);
     color:var(--ink);
   }
@@ -957,7 +959,7 @@
 
         <div class="spec-editor">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
-            <label style="font-size:12px;font-weight:700;color:var(--brand-dark);">مشخصات جدول</label>
+            <label style="font-size:12px;font-weight:700;color:var(--heading);">مشخصات جدول</label>
             <button type="button" class="mini-btn" id="addSpecModalBtn">+ افزودن ردیف</button>
           </div>
           <div id="editSpecRows"></div>
