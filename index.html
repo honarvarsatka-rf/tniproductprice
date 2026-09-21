@@ -2595,15 +2595,26 @@ function rtlFix(value){
 // تا در رسم html2canvas پرانتزها برعکس نشوند و جایشان جابه‌جا نشود.
 function titleBidi(str){
   const s = String(str ?? '');
-  const re = /\([^()]*[A-Za-z0-9][^()]*\)|[A-Za-z0-9][A-Za-z0-9 .\-\/+%]*/g;
+  const ltr = t => `<em dir="ltr" style="unicode-bidi:isolate;display:inline-block;font-style:normal;font-weight:inherit;margin:0">${escapeHtml(t)}</em>`;
+  const re = /\([^()]*\)|[A-Za-z0-9][A-Za-z0-9 .\-\/+%]*/g;
   let out = '', last = 0, m;
   while((m = re.exec(s))){
     const raw = m[0];
-    const t = raw.replace(/\s+$/, '');
-    const trail = raw.slice(t.length);
     out += escapeHtml(s.slice(last, m.index));
-    out += `<em dir="ltr" style="unicode-bidi:isolate;display:inline-block;font-style:normal;font-weight:inherit;margin:0">${escapeHtml(t)}</em>${trail}`;
     last = m.index + raw.length;
+    if(raw[0] === '('){
+      const inner = raw.slice(1, -1);
+      if(/[\u0600-\u06FF]/.test(inner)){
+        // پرانتزِ دور متن فارسی: هر پرانتز جداگانه و بدون وابستگی به جهت‌یابی رسم می‌شود.
+        // در چیدمان راست‌به‌چپ، پرانتز باز سمت راست می‌نشیند و باید شکل «)» داشته باشد (و بالعکس).
+        out += ltr(')') + titleBidi(inner) + ltr('(');
+      } else {
+        out += ltr(raw);
+      }
+    } else {
+      const t = raw.replace(/\s+$/, '');
+      out += ltr(t) + raw.slice(t.length);
+    }
   }
   return out + escapeHtml(s.slice(last));
 }
