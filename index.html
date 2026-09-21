@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <title>لیست قیمت | سازمان تأمین نهاده ایران</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f4d33">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2993,6 +2997,14 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
   }
 });
 
+</script>
+<script>
+// ثبت Service Worker برای نصب به‌عنوان اپ (فقط روی HTTPS / localhost)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>
