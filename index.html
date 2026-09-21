@@ -5,7 +5,8 @@
 <title>لیست قیمت | سازمان تأمین نهاده ایران</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -861,6 +862,177 @@
     #addForm{width:100vw;}
     .history-row{flex-direction:column; align-items:flex-start; gap:8px;}
   }
+/* ==================================================================
+   طراحی جدید فرم (فقط برای صفحه‌های محصول در خروجی PDF استفاده می‌شود)
+   (این بلوک باید داخل تگ style قرار بگیرد.)
+   همهٔ کلاس‌ها پیشوند pdf- دارند تا با استایل‌های ویرایشگر تداخل نکنند.
+   ================================================================== */
+
+.pdf-page{
+  --pg-green:#2fad53;        /* سبز روشن هدر */
+  --pg-green-dark:#07793a;   /* سبز تیره (لوگو، بج وزن، عنوان) */
+  --pg-line:#0b7f3d;         /* خطوط کارت و جدول */
+  --pg-text-green:#12873f;   /* متن‌های سبز */
+  --pg-value:#2b6b47;        /* اعداد داخل جدول */
+  --pg-panel:#e3e3e1;        /* زمینه خاکستری */
+  --pg-ink:#111;
+  --pdf-desc-fs:15px;        /* توسط جاوااسکریپت در صورت طولانی بودن توضیحات کم می‌شود */
+  --pdf-desc-lh:24px;
+
+  direction:rtl;
+  position:relative;
+  width:1104px;
+  height:1709px;
+  background:var(--pg-green);
+  overflow:hidden;
+  font-family:'Vazirmatn','Vazir',Tahoma,sans-serif;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+.pdf-page *{margin:0;padding:0;box-sizing:border-box;}
+
+/* ---------- هدر ---------- */
+.pdf-header{position:absolute;inset:0 0 auto 0;height:142px;color:#fff;}
+
+.pdf-brand-block{
+  position:absolute;top:0;right:8px;
+  width:92px;height:142px;
+  background:var(--pg-green-dark);
+  display:flex;align-items:flex-start;justify-content:center;
+  padding-top:48px;
+}
+.pdf-brand-block img{max-width:76px;max-height:80px;object-fit:contain;display:block;}
+
+.pdf-titles{position:absolute;top:0;right:112px;text-align:right;}
+.pdf-org{
+  position:absolute;top:30px;right:0;white-space:nowrap;
+  font-size:25px;line-height:40px;font-weight:400;
+}
+.pdf-tagline{
+  position:absolute;top:78px;right:0;white-space:nowrap;
+  font-size:27px;line-height:44px;font-weight:400;
+  text-decoration:underline;
+  text-decoration-thickness:1.5px;
+  text-underline-offset:7px;
+}
+
+.pdf-contact{position:absolute;left:38px;top:0;direction:ltr;}
+.pdf-contact .pdf-row{
+  position:absolute;left:0;display:flex;align-items:center;gap:9px;white-space:nowrap;
+}
+.pdf-contact .pdf-phone{top:30px;}
+.pdf-contact .pdf-phone span{font-size:26px;font-weight:500;line-height:36px;}
+.pdf-contact .pdf-site{top:82px;}
+.pdf-contact .pdf-site span{font-family:'Inter',Arial,sans-serif;font-size:17.5px;font-weight:400;}
+
+/* ---------- زمینه خاکستری ---------- */
+.pdf-panel{
+  position:absolute;
+  top:142px;left:8px;right:8px;bottom:9px;
+  background:var(--pg-panel);
+  border-radius:92px 92px 28px 28px;
+  padding:93px 31px 0 32px;
+  display:flex;flex-direction:column;gap:71px;
+}
+
+/* ---------- کارت محصول ---------- */
+.pdf-card{
+  position:relative;
+  flex:0 0 auto;                 /* کارت هرگز فشرده نمی‌شود؛ در صورت نیاز بلندتر می‌شود */
+  width:1025px;
+  min-height:258px;
+  border:2.5px solid var(--pg-line);
+  border-radius:58px 0 58px 0;
+  padding:31px 273px 19px 35px;  /* راست: جای عکس محصول — پایین: ۱۹px تا کارت ۱-خطی دقیقاً ۲۵۸px شود و با توضیحات بلندتر، ردیف پایین به لبه نچسبد */
+}
+
+/* عنوان روی خط بالای کارت */
+.pdf-card-title{
+  position:absolute;
+  top:-21px;right:10px;
+  direction:ltr;
+  unicode-bidi:plaintext;
+  background:var(--pg-panel);
+  padding:0 17px 0 12px;
+  font-family:'Inter','Vazirmatn',Arial,sans-serif;
+  font-size:29px;line-height:40px;
+  color:var(--pg-text-green);
+  white-space:nowrap;
+}
+.pdf-card-title b{font-weight:800;color:var(--pg-green-dark);}
+.pdf-card-title span{font-weight:400;margin-left:5px;}
+
+.pdf-desc{
+  font-size:var(--pdf-desc-fs);
+  line-height:var(--pdf-desc-lh);
+  min-height:var(--pdf-desc-lh);
+  font-weight:500;
+  color:var(--pg-ink);
+}
+.pdf-sub{
+  margin-top:15px;
+  font-size:14.5px;line-height:24px;font-weight:400;
+  color:var(--pg-text-green);
+}
+
+/* عکس محصول (سمت راست کارت) */
+.pdf-card-img{
+  position:absolute;
+  top:26px;bottom:26px;right:22px;
+  width:225px;
+}
+.pdf-card-img img{width:100%;height:100%;object-fit:contain;display:block;}
+
+/* جدول مشخصات */
+.pdf-table{
+  margin-top:9px;
+  height:74px;
+  border:1.5px solid var(--pg-line);
+  border-radius:8px;
+  overflow:hidden;
+  display:grid;
+  grid-template-rows:1fr 1fr;
+  font-size:15px;
+  color:var(--pg-text-green);
+}
+.pdf-cell{
+  display:flex;align-items:center;justify-content:center;
+  padding:0 6px;
+  border-left:1.5px solid var(--pg-line);
+  white-space:nowrap;
+}
+.pdf-cell.last{border-left:0;}
+.pdf-cell.top{border-bottom:1.5px solid var(--pg-line);}
+.pdf-cell.val{
+  color:var(--pg-value);font-weight:500;
+  font-family:'Inter','Vazirmatn',sans-serif;
+  font-size:.967em;              /* = 14.5px وقتی جدول 15px است */
+}
+
+/* ردیف پایین: بج بسته‌بندی + قیمت‌ها */
+.pdf-bottom{margin-top:15px;height:42px;display:flex;align-items:center;}
+.pdf-badge{
+  min-width:98px;height:42px;
+  background:var(--pg-green-dark);
+  color:#fff;
+  border-radius:5px;
+  direction:ltr;
+  display:grid;place-items:center;
+  font-family:'Inter','Vazirmatn',Arial,sans-serif;
+  font-weight:800;font-size:28px;letter-spacing:-0.5px;
+  white-space:nowrap;
+  flex:none;
+}
+.pdf-badge.wide{padding:0 12px;}
+.pdf-price{
+  position:relative;top:-6px;
+  font-size:19.5px;font-weight:700;line-height:30px;
+  color:var(--pg-green-dark);
+  white-space:nowrap;
+}
+.pdf-price.first{margin-right:158px;}
+.pdf-price.second{margin-right:36px;}
+.pdf-bottom.no-badge .pdf-price.first{margin-right:0;}
 </style>
 </head>
 <body class="locked">
@@ -2392,6 +2564,201 @@ document.getElementById('confirmAddBtn').addEventListener('click', ()=>{
   }
 });
 
+const DESIGN_PAGE_W = 1104;   // px — عرض صفحهٔ طراحی
+const DESIGN_PAGE_H = 1709;   // px — ارتفاع صفحهٔ طراحی
+
+// ---------- کمکی‌ها ----------
+
+// نسخهٔ کامل‌تر rtlPunct: علاوه بر نقطه و دو‌نقطه، پرانتزها را هم در رسم html2canvas درست نگه می‌دارد
+function rtlFix(value){
+  const s = String(value ?? '');
+  if(!/[\u0600-\u06FF]/.test(s)) return s;   // متن غیرفارسی دست‌نخورده می‌ماند
+  return s
+    .replace(/([.،؛:!؟)\]»])(?=\s|$)/g, `$1${RLM}`)
+    .replace(/(^|\s)([(\[«])/g, `$1${RLM}$2`);
+}
+
+// عنوان کارت: «برند» پررنگ + بقیهٔ نام معمولی (مثل طرح: Biobe 10 52 10)
+function designTitleHtml(p){
+  const title = String(p.title || '').trim();
+  const brand = String(p.brand || '').trim();
+  const generic = !brand || brand === 'عمومی';
+  const lt = title.toLowerCase();
+  const lb = brand.toLowerCase();
+
+  if(generic) return `<b>${escapeHtml(title)}</b>`;
+  if(lt.startsWith(lb)){
+    const rest = title.slice(brand.length).trim();
+    return rest
+      ? `<b>${escapeHtml(title.slice(0, brand.length))}</b> <span>${escapeHtml(rest)}</span>`
+      : `<b>${escapeHtml(title)}</b>`;
+  }
+  if(lt.includes(lb)) return `<b>${escapeHtml(title)}</b>`;
+  return `<b>${escapeHtml(brand)}</b> <span>${escapeHtml(title)}</span>`;
+}
+
+// «25kg» → «25 KG»  (مثل بج طرح). اگر بسته‌بندی «-» یا خالی بود بج نمایش داده نمی‌شود.
+function designSizeText(size){
+  const s = String(size ?? '').trim();
+  if(!s || s === '-') return '';
+  return s.replace(/^(\d+(?:[.,]\d+)?)\s*([A-Za-z]+)$/, '$1 $2').toUpperCase();
+}
+
+const DESIGN_LOGO_FALLBACK_SVG = `
+  <svg width="74" height="64" viewBox="0 0 74 64" fill="#fff" aria-hidden="true">
+    <path d="M0 4 L33 12 L27 29 Z"/>
+    <path d="M74 4 L41 12 L47 29 Z"/>
+    <path d="M35.5 13 L38.5 13 L37 29 Z"/>
+    <path d="M25 33 L49 33 L37 64 Z"/>
+  </svg>`;
+
+// ---------- ساخت هدر ----------
+function designHeaderHtml(logoSrc){
+  const logo = logoSrc
+    ? `<img src="${escapeHtml(logoSrc)}" alt="">`
+    : DESIGN_LOGO_FALLBACK_SVG;
+
+  return `
+    <header class="pdf-header">
+      <div class="pdf-brand-block">${logo}</div>
+
+      <div class="pdf-titles">
+        <p class="pdf-org">سازمان تامین نهاده ایران</p>
+        <p class="pdf-tagline">تنها محصولات حاوی پلی آمین در ایران</p>
+      </div>
+
+      <div class="pdf-contact">
+        <div class="pdf-row pdf-phone">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+          </svg>
+          <span>۰۲۱ - ۹۱۰ ۱۲۳ ۲۳</span>
+        </div>
+        <div class="pdf-row pdf-site">
+          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="1.8" aria-hidden="true">
+            <circle cx="14" cy="14" r="12"/>
+            <ellipse cx="14" cy="14" rx="5.2" ry="12"/>
+            <path d="M2 14h24M4 7.5h20M4 20.5h20"/>
+          </svg>
+          <span>www.taminnahade.com</span>
+        </div>
+      </div>
+    </header>`;
+}
+
+// ---------- ساخت یک کارت محصول ----------
+function designCardHtml(p){
+  // جدول: ستون اول «عنصر / درصد حجمی» و بعد هر مشخصات محصول یک ستون
+  const spec = (Array.isArray(p.spec) && p.spec.length) ? p.spec : [{ label:'مشخصات', value:'-' }];
+  const cols = '185fr ' + spec.map(s => {
+    const len = Math.max(String(s.label ?? '').length, String(s.value ?? '').length, 2);
+    return (60 + 9 * len) + 'fr';
+  }).join(' ');
+
+  const head = ['عنصر', ...spec.map(s => s.label)];
+  const vals = ['درصد حجمی / میزان', ...spec.map(s => s.value)];
+  const makeRow = (arr, isTop) => arr.map((t, i) => {
+    const cls = ['pdf-cell', isTop ? 'top' : 'val', i === arr.length - 1 ? 'last' : '']
+      .filter(Boolean).join(' ');
+    // ستون اول ردیف مقادیر رنگ سبز معمولی دارد (نه رنگ اعداد)
+    const extra = (!isTop && i === 0) ? ' style="color:var(--pg-text-green);font-weight:400;font-family:inherit;font-size:1em;"' : '';
+    return `<div class="${cls}"${extra}>${escapeHtml(rtlFix(t))}</div>`;
+  }).join('');
+
+  // ردیف پایین: بج بسته‌بندی + قیمت‌ها (با احترام به تیک‌های «نمایش قیمت‌ها»)
+  const size = designSizeText(p.size);
+  const badge = size
+    ? `<div class="pdf-badge${size.length > 6 ? ' wide' : ''}">${escapeHtml(size)}</div>`
+    : '';
+
+  const priceItems = [];
+  if(globalShowPrice  && String(p.price  ?? '').trim()) priceItems.push(['مصرف کننده:', p.price]);
+  if(globalShowPrice2 && String(p.price2 ?? '').trim()) priceItems.push(['همکاری:',     p.price2]);
+  const pricesHtml = priceItems.map(([label, val], i) =>
+    `<div class="pdf-price ${i === 0 ? 'first' : 'second'}">${escapeHtml(rtlFix(label))} ${escapeHtml(String(val))} تومان</div>`
+  ).join('');
+
+  const img = p.image
+    ? `<div class="pdf-card-img"><img src="${escapeHtml(p.image)}" alt=""></div>`
+    : '';
+
+  return `
+    <article class="pdf-card">
+      <h2 class="pdf-card-title">${designTitleHtml(p)}</h2>
+      <p class="pdf-desc">${escapeHtml(rtlFix(p.desc))}</p>
+      <p class="pdf-sub">${escapeHtml(rtlFix('تجزیه های ضمانت شده:'))}</p>
+      <div class="pdf-table" style="grid-template-columns:${cols}">${makeRow(head, true)}${makeRow(vals, false)}</div>
+      <div class="pdf-bottom${size ? '' : ' no-badge'}">${badge}${pricesHtml}</div>
+      ${img}
+    </article>`;
+}
+
+// ---------- ساخت یک صفحهٔ کامل (هدر + حداکثر ۴ کارت) ----------
+function buildDesignPage(chunk, logoSrc){
+  const page = document.createElement('div');
+  page.className = 'pdf-page';
+  // بیرون از دید قرار می‌گیرد؛ عکس‌برداری از همین المان انجام می‌شود
+  page.style.cssText = 'position:absolute;left:-99999px;top:0;';
+  page.innerHTML = designHeaderHtml(logoSrc) +
+    `<section class="pdf-panel">${chunk.map(designCardHtml).join('')}</section>`;
+  return page;
+}
+
+// ---------- تنظیم خودکار: توضیحات بلند / جدول‌های پهن ----------
+// در طرح اصلی جای یک خط توضیح است. اگر توضیحات بلندتر باشد:
+//   ۱) جدول‌های خیلی پهن کمی کوچک‌تر می‌شوند تا همهٔ ستون‌ها جا شوند
+//   ۲) کارت‌ها بلند می‌شوند و فاصلهٔ بینشان کم می‌شود
+//   ۳) اگر باز هم جا نشد، اندازهٔ متن توضیحات کمی کم می‌شود
+// وقتی همه‌چیز جا شود، فاصلهٔ ۷۱px خود طرح حفظ می‌شود.
+function fitDesignPage(page){
+  const panel = page.querySelector('.pdf-panel');
+  const cards = [...panel.querySelectorAll('.pdf-card')];
+  if(!cards.length) return;
+
+  const MIN_GAP = 24, MAX_GAP = 71, BOTTOM_SAFE = 24;
+  const padTop = parseFloat(getComputedStyle(panel).paddingTop) || 0;
+  const availH = panel.clientHeight - padTop - BOTTOM_SAFE;
+  const sumH = () => cards.reduce((s, c) => s + c.offsetHeight, 0);
+
+  panel.querySelectorAll('.pdf-table').forEach(t => {
+    let f = 15;
+    while(t.scrollWidth > t.clientWidth + 1 && f > 9){
+      f -= 0.5;
+      t.style.fontSize = f + 'px';
+    }
+  });
+
+  let fs = 15;
+  while(sumH() + MIN_GAP * (cards.length - 1) > availH && fs > 11){
+    fs -= 0.5;
+    page.style.setProperty('--pdf-desc-fs', fs + 'px');
+    page.style.setProperty('--pdf-desc-lh', Math.round(fs * 1.6) + 'px');
+  }
+
+  const gap = cards.length > 1
+    ? Math.max(MIN_GAP, Math.min(MAX_GAP, (availH - sumH()) / (cards.length - 1)))
+    : MAX_GAP;
+  panel.style.gap = gap + 'px';
+}
+
+// فونت‌های طرح (Inter + وزیرمتن) باید قبل از عکس‌برداری کامل لود شده باشند
+async function ensureDesignFonts(){
+  if(!(document.fonts && document.fonts.load)) return;
+  const fa = 'ابپتثجچ ۰۱۲۳ تومان', en = 'Aa 10 KG';
+  try {
+    await Promise.all([
+      document.fonts.load('400 29px Inter', en),
+      document.fonts.load('500 15px Inter', en),
+      document.fonts.load('700 20px Inter', en),
+      document.fonts.load('800 29px Inter', en),
+      document.fonts.load('800 29px Vazirmatn', fa),
+      document.fonts.load('400 15px Vazirmatn', fa),
+      document.fonts.load('500 15px Vazirmatn', fa),
+      document.fonts.load('700 20px Vazirmatn', fa)
+    ]);
+  } catch(err){ /* اگر لود نشد، با فونت جایگزین ادامه می‌دهد */ }
+}
+
 // ---------- export to PDF ----------
 document.getElementById('exportBtn').addEventListener('click', async ()=>{
   const exportBtn = document.getElementById('exportBtn');
@@ -2405,22 +2772,21 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
   closeEditor();
 
   try {
-    const PAGE_W = 210, PAGE_H = 297; // A4, mm
-    const MARGIN = 8; // mm
-    const CONTENT_W = PAGE_W - MARGIN * 2;
-    const CONTENT_H = PAGE_H - MARGIN * 2;
-    const PER_PAGE = 4;
+    const PAGE_W = 210, PAGE_H = 297;                              // A4 (فقط برای جلد)، mm
+    const DESIGN_H_MM = PAGE_W * DESIGN_PAGE_H / DESIGN_PAGE_W;    // ≈ 325.1mm — نسبت صفحهٔ طرح
+    const PER_PAGE = 4;                                            // ۴ محصول در هر صفحه
 
-    const headerEl = document.querySelector('.brand-header');
     const coverEl = document.getElementById('pdfCoverPage');
-    const contentWidthPx = document.getElementById('sheet').getBoundingClientRect().width;
+    const coverImg = coverEl ? coverEl.querySelector('img') : null;
+    const hasCover = !!(coverImg && coverImg.src);
 
-    // Only export cards that are currently shown (respects brand/category
-    // filters) and not explicitly marked "hidden in PDF".
-    const cardEls = [...document.querySelectorAll('#cards .card')].filter(card=>{
-      const prod = products.find(x => String(x.id) === String(card.dataset.id));
-      return !(prod && prod.hidden_pdf);
-    });
+    const logoImg = document.querySelector('#logoBox img');
+    const logoSrc = logoImg ? logoImg.src : '';
+
+    // فقط محصولاتی که الان روی صفحه‌اند (فیلتر برند/دسته/جستجو) و «عدم نمایش در PDF» ندارند
+    const pdfProducts = [...document.querySelectorAll('#cards .card')]
+      .map(card => products.find(x => String(x.id) === String(card.dataset.id)))
+      .filter(prod => prod && !prod.hidden_pdf);
 
     // Wait for every image to finish decoding and for fonts to be ready,
     // so nothing gets photographed half-rendered.
@@ -2442,9 +2808,11 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
 
     // Renders one off-screen container, captures it, and returns the
     // resulting image sized in mm to fit within the given box (never cropped).
-    async function captureToImage(container, maxWmm, maxHmm){
+    // onReady (اختیاری): بعد از لود شدن همه‌چیز و قبل از عکس‌برداری صدا زده می‌شود.
+    async function captureToImage(container, maxWmm, maxHmm, onReady){
       document.body.appendChild(container);
       await waitForRender(container);
+      if(typeof onReady === 'function') onReady(container);
       container.offsetHeight; // force reflow
       const canvas = await html2canvas(container, {
         scale: 2,
@@ -2466,74 +2834,46 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
       return { dataUrl: canvas.toDataURL('image/jpeg', 0.95), wMm, hMm };
     }
 
-    const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    // اگر جلد داریم صفحهٔ اول A4 است؛ وگرنه از همان ابتدا اندازهٔ صفحهٔ طرح
+    const pdf = new window.jspdf.jsPDF({
+      unit: 'mm',
+      format: hasCover ? 'a4' : [PAGE_W, DESIGN_H_MM],
+      orientation: 'portrait'
+    });
     let firstPage = true;
 
     // ---- Page 1: cover image, full bleed ----
     // This is a static image, so skip the DOM/html2canvas round-trip entirely
     // (which was fighting CSS cascade issues) and hand it straight to jsPDF.
-    if(coverEl){
-      const coverImg = coverEl.querySelector('img');
-      if(coverImg && coverImg.src){
-        await new Promise(resolve=>{
-          if(coverImg.complete && coverImg.naturalWidth) return resolve();
-          coverImg.addEventListener('load', resolve, { once:true });
-          coverImg.addEventListener('error', resolve, { once:true });
-        });
-        const iw = coverImg.naturalWidth || 1;
-        const ih = coverImg.naturalHeight || 1;
-        let wMm = PAGE_W;
-        let hMm = ih * (wMm / iw);
-        if(hMm > PAGE_H){
-          hMm = PAGE_H;
-          wMm = iw * (hMm / ih);
-        }
-        pdf.addImage(coverImg.src, 'JPEG', (PAGE_W - wMm) / 2, (PAGE_H - hMm) / 2, wMm, hMm);
-        firstPage = false;
+    if(hasCover){
+      await new Promise(resolve=>{
+        if(coverImg.complete && coverImg.naturalWidth) return resolve();
+        coverImg.addEventListener('load', resolve, { once:true });
+        coverImg.addEventListener('error', resolve, { once:true });
+      });
+      const iw = coverImg.naturalWidth || 1;
+      const ih = coverImg.naturalHeight || 1;
+      let wMm = PAGE_W;
+      let hMm = ih * (wMm / iw);
+      if(hMm > PAGE_H){
+        hMm = PAGE_H;
+        wMm = iw * (hMm / ih);
       }
+      pdf.addImage(coverImg.src, 'JPEG', (PAGE_W - wMm) / 2, (PAGE_H - hMm) / 2, wMm, hMm);
+      firstPage = false;
     }
 
-    // ---- Content pages: header + up to 4 products per page ----
-    // Target height (in px, at the same scale as contentWidthPx) that a full
-    // page's content box (CONTENT_W x CONTENT_H mm) corresponds to. Giving the
-    // capture container this as a min-height (not a fixed height) lets flexbox
-    // spread any leftover vertical space evenly between the header/cards
-    // instead of leaving it as blank space at the bottom of the page, while
-    // still letting the container grow taller if the content genuinely needs
-    // more room (handled by the existing shrink-to-fit logic below).
-    const pxPerMm = contentWidthPx / CONTENT_W;
-    const targetHeightPx = CONTENT_H * pxPerMm;
+    // ---- Content pages: طراحی جدید فرم، حداکثر ۴ محصول در هر صفحه ----
+    await ensureDesignFonts();
 
-    for(let i = 0; i < cardEls.length; i += PER_PAGE){
-      const chunk = cardEls.slice(i, i + PER_PAGE);
+    for(let i = 0; i < pdfProducts.length; i += PER_PAGE){
+      const chunk = pdfProducts.slice(i, i + PER_PAGE);
+      const pageEl = buildDesignPage(chunk, logoSrc);
 
-      const container = document.createElement('div');
-      container.style.cssText = `position:absolute;left:-99999px;top:0;width:${contentWidthPx}px;min-height:${targetHeightPx}px;background:#fff;padding:0 8px 8px;display:flex;flex-direction:column;`;
+      const { dataUrl, wMm, hMm } = await captureToImage(pageEl, PAGE_W, DESIGN_H_MM, fitDesignPage);
 
-      const headerClone = headerEl.cloneNode(true);
-      headerClone.removeAttribute('id');
-      headerClone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
-      headerClone.style.flex = '0 0 auto';
-      container.appendChild(headerClone);
-
-      // Cards grow to absorb any leftover page height themselves (and their
-      // content is centered within the extra room) instead of that space
-      // showing up as a big visible gap between products.
-      chunk.forEach(card=>{
-        const clone = card.cloneNode(true);
-        clone.removeAttribute('id');
-        clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
-        clone.style.flex = '1 1 0';
-        clone.style.display = 'flex';
-        clone.style.flexDirection = 'column';
-        clone.style.justifyContent = 'center';
-        container.appendChild(clone);
-      });
-
-      const { dataUrl, wMm, hMm } = await captureToImage(container, CONTENT_W, CONTENT_H);
-
-      if(!firstPage) pdf.addPage();
-      pdf.addImage(dataUrl, 'JPEG', MARGIN, MARGIN, wMm, hMm);
+      if(!firstPage) pdf.addPage([PAGE_W, DESIGN_H_MM], 'portrait');
+      pdf.addImage(dataUrl, 'JPEG', (PAGE_W - wMm) / 2, 0, wMm, hMm);
       firstPage = false;
     }
 
