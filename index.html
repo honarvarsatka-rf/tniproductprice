@@ -2947,8 +2947,21 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
     // ---- Content pages: طراحی جدید فرم، حداکثر ۴ محصول در هر صفحه ----
     await ensureDesignFonts();
 
-    for(let i = 0; i < pdfProducts.length; i += PER_PAGE){
-      const chunk = pdfProducts.slice(i, i + PER_PAGE);
+    // هر برند از صفحهٔ جدید شروع می‌شود؛ اگر برندی تمام شود، بقیهٔ صفحه خالی می‌ماند.
+    // (محصولات پشت‌سرهم با یک برند یک گروه‌اند؛ هر گروه به دسته‌های ۴تایی تقسیم می‌شود.)
+    const brandKey = prod => String(prod.brand || '').trim().toLowerCase();
+    const pageChunks = [];
+    let run = [];
+    pdfProducts.forEach((prod, idx) => {
+      if(idx > 0 && brandKey(prod) !== brandKey(pdfProducts[idx - 1])){
+        for(let k = 0; k < run.length; k += PER_PAGE) pageChunks.push(run.slice(k, k + PER_PAGE));
+        run = [];
+      }
+      run.push(prod);
+    });
+    for(let k = 0; k < run.length; k += PER_PAGE) pageChunks.push(run.slice(k, k + PER_PAGE));
+
+    for(const chunk of pageChunks){
       const pageEl = buildDesignPage(chunk, logoSrc);
 
       const { dataUrl, wMm, hMm } = await captureToImage(pageEl, PAGE_W, DESIGN_H_MM, fitDesignPage);
