@@ -2591,6 +2591,23 @@ function rtlFix(value){
     .replace(/(^|\s)([(\[«])/g, `$1${RLM}$2`);
 }
 
+// متن عنوان: بخش‌های لاتین و پرانتزدار (مثل «(MKP)» یا «Biobe») جداگانه و ایزوله رسم می‌شوند
+// تا در رسم html2canvas پرانتزها برعکس نشوند و جایشان جابه‌جا نشود.
+function titleBidi(str){
+  const s = String(str ?? '');
+  const re = /\([^()]*[A-Za-z0-9][^()]*\)|[A-Za-z0-9][A-Za-z0-9 .\-\/+%]*/g;
+  let out = '', last = 0, m;
+  while((m = re.exec(s))){
+    const raw = m[0];
+    const t = raw.replace(/\s+$/, '');
+    const trail = raw.slice(t.length);
+    out += escapeHtml(s.slice(last, m.index));
+    out += `<em dir="ltr" style="unicode-bidi:isolate;display:inline-block;font-style:normal;font-weight:inherit;margin:0">${escapeHtml(t)}</em>${trail}`;
+    last = m.index + raw.length;
+  }
+  return out + escapeHtml(s.slice(last));
+}
+
 // عنوان کارت: «برند» پررنگ + بقیهٔ نام معمولی (مثل طرح: Biobe 10 52 10)
 function designTitleHtml(p){
   const title = String(p.title || '').trim();
@@ -2599,15 +2616,15 @@ function designTitleHtml(p){
   const lt = title.toLowerCase();
   const lb = brand.toLowerCase();
 
-  if(generic) return `<b>${escapeHtml(title)}</b>`;
+  if(generic) return `<b>${titleBidi(title)}</b>`;
   if(lt.startsWith(lb)){
     const rest = title.slice(brand.length).trim();
     return rest
-      ? `<b>${escapeHtml(title.slice(0, brand.length))}</b> <span>${escapeHtml(rest)}</span>`
-      : `<b>${escapeHtml(title)}</b>`;
+      ? `<b>${titleBidi(title.slice(0, brand.length))}</b> <span>${titleBidi(rest)}</span>`
+      : `<b>${titleBidi(title)}</b>`;
   }
-  if(lt.includes(lb)) return `<b>${escapeHtml(title)}</b>`;
-  return `<span style="margin-left:0">${escapeHtml(title)}</span>`;   // برند در عنوان اضافه نمی‌شود
+  if(lt.includes(lb)) return `<b>${titleBidi(title)}</b>`;
+  return `<span style="margin-left:0">${titleBidi(title)}</span>`;   // برند در عنوان اضافه نمی‌شود
 }
 
 // «25kg» → «25 KG»  (مثل بج طرح). اگر بسته‌بندی «-» یا خالی بود بج نمایش داده نمی‌شود.
@@ -2787,6 +2804,17 @@ function fitDesignPage(page){
     page.style.setProperty('--pdf-desc-fs', fs + 'px');
     page.style.setProperty('--pdf-desc-lh', Math.round(fs * 1.6) + 'px');
   }
+
+  // عکس محصول: اندازهٔ دقیق با حفظ نسبت (رسم html2canvas روی object-fit مطمئن نیست و عکس را می‌کشد)
+  cards.forEach(card => {
+    const box = card.querySelector('.pdf-card-img');
+    const img = box && box.querySelector('img');
+    if(!img || !img.naturalWidth || !img.naturalHeight) return;
+    const bw = box.clientWidth, bh = box.clientHeight;
+    const r = Math.min(bw / img.naturalWidth, bh / img.naturalHeight);
+    const w = img.naturalWidth * r, h = img.naturalHeight * r;
+    img.style.cssText = `position:absolute;width:${w}px;height:${h}px;left:${(bw - w) / 2}px;top:${(bh - h) / 2}px;object-fit:fill;`;
+  });
 
   const gap = cards.length > 1
     ? Math.max(MIN_GAP, Math.min(MAX_GAP, (availH - sumH()) / (cards.length - 1)))
