@@ -1021,15 +1021,31 @@
   flex:none;
 }
 .pdf-badge.wide{padding:0 12px;}
+/* قیمت‌ها: قیمت اول کنار بج، قیمت آخر (همکاری) همیشه چسبیده به لبهٔ چپ جدول
+   → فاصلهٔ آن از خط کادر در همهٔ محصولات دقیقاً یکسان است (۳۵px = پدینگ کارت). */
+.pdf-prices{
+  flex:1 1 auto;min-width:0;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-right:var(--pdf-price-lead,158px);   /* فاصله از بج؛ در صورت کمبود جا با جاوااسکریپت کم می‌شود */
+  font-size:19.5px;                           /* در صورت کمبود جا با جاوااسکریپت کم می‌شود */
+}
+.pdf-prices.single{justify-content:flex-start;}
+.pdf-bottom.no-badge .pdf-prices{margin-right:0;}
 .pdf-price{
-  position:relative;top:-6px;
-  font-size:19.5px;font-weight:700;line-height:30px;
+  position:relative;top:-6px;flex:none;
+  font-size:inherit;font-weight:700;line-height:30px;
   color:var(--pg-green-dark);
   white-space:nowrap;
 }
-.pdf-price.first{margin-right:158px;}
-.pdf-price.second{margin-right:36px;}
-.pdf-bottom.no-badge .pdf-price.first{margin-right:0;}
+
+/* جدول با ستون‌های خیلی طولانی: متن سرستون‌ها در چند خط شکسته می‌شود و جدول بلندتر می‌شود */
+.pdf-table.wrap{
+  height:auto;
+  grid-template-rows:minmax(37px,auto) minmax(37px,auto);
+}
+.pdf-table.wrap .pdf-cell{
+  white-space:normal;text-align:center;line-height:1.5;padding:5px 7px;
+}
 </style>
 </head>
 <body class="locked">
@@ -2671,9 +2687,13 @@ function designCardHtml(p){
   const priceItems = [];
   if(globalShowPrice  && String(p.price  ?? '').trim()) priceItems.push(['مصرف کننده:', p.price]);
   if(globalShowPrice2 && String(p.price2 ?? '').trim()) priceItems.push(['همکاری:',     p.price2]);
-  const pricesHtml = priceItems.map(([label, val], i) =>
-    `<div class="pdf-price ${i === 0 ? 'first' : 'second'}">${escapeHtml(rtlFix(label))} ${escapeHtml(String(val))} تومان</div>`
-  ).join('');
+  const pricesHtml = priceItems.length
+    ? `<div class="pdf-prices${priceItems.length < 2 ? ' single' : ''}">` +
+        priceItems.map(([label, val]) =>
+          `<div class="pdf-price">${escapeHtml(rtlFix(label))} ${escapeHtml(String(val))} تومان</div>`
+        ).join('') +
+      `</div>`
+    : '';
 
   const img = p.image
     ? `<div class="pdf-card-img"><img src="${escapeHtml(p.image)}" alt=""></div>`
@@ -2717,12 +2737,48 @@ function fitDesignPage(page){
   const availH = panel.clientHeight - padTop - BOTTOM_SAFE;
   const sumH = () => cards.reduce((s, c) => s + c.offsetHeight, 0);
 
+  // ۱) جدول‌ها: اول فونت تا ۱۲px کوچک می‌شود؛ اگر باز هم جا نشد، متن سرستون‌ها
+  //    در چند خط شکسته می‌شود (به‌جای بریده شدن) و جدول کمی بلندتر می‌شود.
   panel.querySelectorAll('.pdf-table').forEach(t => {
+    const overflows = () => t.scrollWidth > t.clientWidth + 1;
     let f = 15;
-    while(t.scrollWidth > t.clientWidth + 1 && f > 9){
+    while(overflows() && f > 12){
       f -= 0.5;
       t.style.fontSize = f + 'px';
     }
+    if(overflows()){
+      t.classList.add('wrap');
+      f = 14;
+      t.style.fontSize = f + 'px';
+      while(overflows() && f > 10){
+        f -= 0.5;
+        t.style.fontSize = f + 'px';
+      }
+    }
+  });
+
+  // ۲) ردیف قیمت‌ها: اگر جا کم بود اول فاصله از بج کم می‌شود، بعد اندازهٔ فونت؛
+  //    در نتیجه قیمت‌ها هیچ‌وقت از پدینگ کارت بیرون نمی‌زنند و به خط کادر نمی‌چسبند.
+  panel.querySelectorAll('.pdf-bottom').forEach(bottom => {
+    const prices = bottom.querySelector('.pdf-prices');
+    if(!prices) return;
+    const items = [...prices.querySelectorAll('.pdf-price')];
+    const badge = bottom.querySelector('.pdf-badge');
+    const MAX_LEAD = bottom.classList.contains('no-badge') ? 0 : 158;
+    const MIN_LEAD = MAX_LEAD ? 18 : 0;
+    const MIN_GAP  = 26;                       // حداقل فاصلهٔ دو قیمت از هم
+    const roomW  = () => bottom.clientWidth - (badge ? badge.offsetWidth : 0);
+    const itemsW = () => items.reduce((s, el) => s + el.getBoundingClientRect().width, 0);
+    const need   = () => itemsW() + (items.length > 1 ? MIN_GAP : 0);
+
+    let fs = 19.5;
+    prices.style.fontSize = fs + 'px';
+    while(roomW() - need() < MIN_LEAD && fs > 14){
+      fs -= 0.5;
+      prices.style.fontSize = fs + 'px';
+    }
+    const lead = Math.max(MIN_LEAD, Math.min(MAX_LEAD, roomW() - need()));
+    prices.style.setProperty('--pdf-price-lead', lead + 'px');
   });
 
   let fs = 15;
