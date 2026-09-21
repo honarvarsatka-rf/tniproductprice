@@ -2591,7 +2591,7 @@ function designTitleHtml(p){
       : `<b>${escapeHtml(title)}</b>`;
   }
   if(lt.includes(lb)) return `<b>${escapeHtml(title)}</b>`;
-  return `<b>${escapeHtml(brand)}</b> <span>${escapeHtml(title)}</span>`;
+  return `<span style="margin-left:0">${escapeHtml(title)}</span>`;   // برند در عنوان اضافه نمی‌شود
 }
 
 // «25kg» → «25 KG»  (مثل بج طرح). اگر بسته‌بندی «-» یا خالی بود بج نمایش داده نمی‌شود.
