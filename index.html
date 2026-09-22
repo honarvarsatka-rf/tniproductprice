@@ -411,6 +411,34 @@
     padding:3px 8px;
     margin-right:7px;
   }
+  .call-only-badge{
+    display:inline-block;
+    font-size:11px;
+    color:#0f4d33;
+    background:#e7f4ec;
+    border:1px solid #bfe3cb;
+    border-radius:999px;
+    padding:3px 8px;
+    margin-right:7px;
+  }
+  .call-toggle-btn{
+    width:32px;height:32px;border-radius:50%;
+    border:1.5px solid var(--line);
+    background:#f2f7f4;
+    color:var(--ink-soft);
+    font-size:14px;
+    line-height:1;
+    cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:0;
+    transition:background .15s,border-color .15s,color .15s;
+  }
+  .call-toggle-btn:hover{background:#e2efe6;}
+  .call-toggle-btn.active{
+    background:var(--brand);
+    border-color:var(--brand);
+    color:#fff;
+  }
 
   /* ---------- shared editor modal ---------- */
   .editor-modal{
@@ -828,6 +856,9 @@
   body.dark-theme .brand-chip{background:#122a22; color:#7fd7ab; border-color:#1f4a3a;}
   body.dark-theme .category-chip{background:#2a2410; color:#e3c479; border-color:#4a3f1f;}
   body.dark-theme .hidden-pdf-badge{background:#3a2418; color:#f0a988; border-color:#5a3524;}
+  body.dark-theme .call-only-badge{background:#122a22; color:#7fd7ab; border-color:#1f4a3a;}
+  body.dark-theme .call-toggle-btn{background:#182338;border-color:var(--line);color:var(--ink-soft);}
+  body.dark-theme .call-toggle-btn.active{background:var(--brand-light);border-color:var(--brand-light);color:#0b1220;}
   body.dark-theme .history-row{border-color:var(--line);}
   body.dark-theme .brand-opt:hover, body.dark-theme .brand-opt-all:hover{background:#182338;}
   body.dark-theme #refreshBrandsBtn,
@@ -1123,6 +1154,13 @@
         <label class="price-toggle">
           <input type="checkbox" id="globalShowPrice2" checked>
           قیمت همکاری
+        </label>
+      </div>
+
+      <div class="filter-section">
+        <label class="price-toggle">
+          <input type="checkbox" id="ignoreBrandPageBreakChk">
+          در PDF صفحه بر اساس برند جدا نشود (۴ محصول پشت سر هم در هر صفحه)
         </label>
       </div>
 
@@ -1465,6 +1503,9 @@ const seedProducts = [
 const cardsEl = document.getElementById('cards');
 let globalShowPrice = true;
 let globalShowPrice2 = true;
+// PDF: وقتی روشن باشد، هر برند دیگر صفحه‌ی جدید شروع نمی‌کند — همهٔ محصولات
+// پشت‌سرهم و هر صفحه ۴ محصول (بدون خالی گذاشتن باقیماندهٔ صفحه‌ی برند قبلی).
+let ignoreBrandPageBreak = false;
 
 // ---------- header logo upload (shared across everyone via Supabase) ----------
 const LOGO_STORAGE_KEY = 'taminnahade_logo'; // used only as an instant-paint cache on this device
@@ -1741,6 +1782,7 @@ function render(){
             <div class="brand-chip">برند: ${escapeHtml(p.brand || 'عمومی')}</div>
             ${p.category ? `<div class="category-chip">نوع: ${escapeHtml(p.category)}</div>` : ''}
             ${p.hidden_pdf ? '<span class="hidden-pdf-badge">در PDF نمایش داده نمی‌شود</span>' : ''}
+            ${p.call_only ? '<span class="call-only-badge">در PDF: «استعلام بگیرید»</span>' : ''}
           </div>
         </div>
         <button class="del-btn" data-idx="${idx}">حذف محصول</button>
@@ -1777,6 +1819,7 @@ function render(){
               <input type="checkbox" class="hidden-pdf-toggle" data-idx="${idx}" ${p.hidden_pdf ? 'checked' : ''}>
               عدم نمایش در PDF
             </label>
+            <button type="button" class="call-toggle-btn${p.call_only ? ' active' : ''}" data-idx="${idx}" title="این محصول فقط با تماس/استعلام قیمت مشخص شود" aria-pressed="${p.call_only ? 'true' : 'false'}">📞</button>
             <button type="button" class="edit-btn edit-product-btn" data-idx="${idx}">ویرایش محصول</button>
           </div>
         </div>
@@ -1840,6 +1883,28 @@ function render(){
         return;
       }
       p.hidden_pdf = hidden;
+      render();
+    });
+  });
+
+  // "فقط استعلام قیمت" toggle (icon-only, off by default): در PDF به‌جای
+  // قیمت مصرف‌کننده/همکاری فقط نوشته‌ی «استعلام بگیرید» چاپ می‌شود.
+  document.querySelectorAll('.call-toggle-btn').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      const idx = Number(e.currentTarget.dataset.idx);
+      const p = products[idx];
+      const next = !p.call_only;
+      await logHistory({...p}, 'update');
+      let { error } = await sbClient.from('products').update({ call_only: next }).eq('id', p.id);
+      if(error && /call_only/i.test(error.message)){
+        alert('برای فعال‌سازی این قابلیت باید یک‌بار ستون call_only (نوع boolean) در جدول products در Supabase ساخته شود.');
+        return;
+      }
+      if(error){
+        alert('تغییر وضعیت با خطا مواجه شد: ' + error.message);
+        return;
+      }
+      p.call_only = next;
       render();
     });
   });
@@ -1971,7 +2036,8 @@ function rowToProduct(row){
     image: row.image_url || null,
     brand: row.brand || 'عمومی',
     category: row.category || '',
-    hidden_pdf: !!row.hidden_pdf
+    hidden_pdf: !!row.hidden_pdf,
+    call_only: !!row.call_only
   };
 }
 
@@ -2495,6 +2561,10 @@ document.getElementById('globalShowPrice2').addEventListener('change', e=>{
   render();
 });
 
+document.getElementById('ignoreBrandPageBreakChk').addEventListener('change', e=>{
+  ignoreBrandPageBreak = e.target.checked;
+});
+
 // ---------- add product form (fixed left drawer) ----------
 const addForm = document.getElementById('addForm');
 const addFormOverlay = document.getElementById('addFormOverlay');
@@ -2716,16 +2786,22 @@ function designCardHtml(p){
     ? `<div class="pdf-badge${size.length > 6 ? ' wide' : ''}">${escapeHtml(size)}</div>`
     : '';
 
+  // اگر روی محصول «فقط استعلام قیمت» فعال باشد، به‌جای هر دو قیمت
+  // (مصرف‌کننده و همکاری) فقط نوشته‌ی «استعلام بگیرید» در PDF چاپ می‌شود.
   const priceItems = [];
-  if(globalShowPrice  && String(p.price  ?? '').trim()) priceItems.push(['مصرف کننده:', p.price]);
-  if(globalShowPrice2 && String(p.price2 ?? '').trim()) priceItems.push(['همکاری:',     p.price2]);
-  const pricesHtml = priceItems.length
-    ? `<div class="pdf-prices${priceItems.length < 2 ? ' single' : ''}">` +
-        priceItems.map(([label, val]) =>
-          `<div class="pdf-price">${escapeHtml(rtlFix(label))} ${escapeHtml(String(val))} تومان</div>`
-        ).join('') +
-      `</div>`
-    : '';
+  if(!p.call_only){
+    if(globalShowPrice  && String(p.price  ?? '').trim()) priceItems.push(['مصرف کننده:', p.price]);
+    if(globalShowPrice2 && String(p.price2 ?? '').trim()) priceItems.push(['همکاری:',     p.price2]);
+  }
+  const pricesHtml = p.call_only
+    ? `<div class="pdf-prices single"><div class="pdf-price">${escapeHtml(rtlFix('استعلام بگیرید'))}</div></div>`
+    : (priceItems.length
+        ? `<div class="pdf-prices${priceItems.length < 2 ? ' single' : ''}">` +
+            priceItems.map(([label, val]) =>
+              `<div class="pdf-price">${escapeHtml(rtlFix(label))} ${escapeHtml(String(val))} تومان</div>`
+            ).join('') +
+          `</div>`
+        : '');
 
   const img = p.image
     ? `<div class="pdf-card-img"><img src="${escapeHtml(p.image)}" alt=""></div>`
@@ -2964,11 +3040,13 @@ document.getElementById('exportBtn').addEventListener('click', async ()=>{
 
     // هر برند از صفحهٔ جدید شروع می‌شود؛ اگر برندی تمام شود، بقیهٔ صفحه خالی می‌ماند.
     // (محصولات پشت‌سرهم با یک برند یک گروه‌اند؛ هر گروه به دسته‌های ۴تایی تقسیم می‌شود.)
+    // با روشن بودن گزینهٔ «صفحه بر اساس برند جدا نشود» این محدودیت نادیده گرفته
+    // می‌شود و همهٔ محصولات پشت‌سرهم، هر صفحه ۴تا، در PDF قرار می‌گیرند.
     const brandKey = prod => String(prod.brand || '').trim().toLowerCase();
     const pageChunks = [];
     let run = [];
     pdfProducts.forEach((prod, idx) => {
-      if(idx > 0 && brandKey(prod) !== brandKey(pdfProducts[idx - 1])){
+      if(!ignoreBrandPageBreak && idx > 0 && brandKey(prod) !== brandKey(pdfProducts[idx - 1])){
         for(let k = 0; k < run.length; k += PER_PAGE) pageChunks.push(run.slice(k, k + PER_PAGE));
         run = [];
       }
