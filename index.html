@@ -1821,7 +1821,7 @@ function render(){
             <div class="brand-chip">برند: ${escapeHtml(p.brand || 'عمومی')}</div>
             ${p.category ? `<div class="category-chip">نوع: ${escapeHtml(p.category)}</div>` : ''}
             ${p.hidden_pdf ? '<span class="hidden-pdf-badge">در PDF نمایش داده نمی‌شود</span>' : ''}
-            ${p.call_only ? '<span class="call-only-badge">در PDF: «استعلام بگیرید»</span>' : ''}
+            ${p.call_only ? '<span class="call-only-badge">در PDF: «قیمت : استعلام»</span>' : ''}
           </div>
         </div>
         <button class="del-btn" data-idx="${idx}">حذف محصول</button>
@@ -2905,7 +2905,7 @@ function designCardHtml(p){
     if(globalShowPrice2 && String(p.price2 ?? '').trim()) priceItems.push(['همکاری:',     p.price2]);
   }
   const pricesHtml = p.call_only
-    ? `<div class="pdf-prices single"><div class="pdf-price">${escapeHtml(rtlFix('استعلام بگیرید'))}</div></div>`
+    ? `<div class="pdf-prices single"><div class="pdf-price">${escapeHtml(rtlFix('قیمت : استعلام'))}</div></div>`
     : (priceItems.length
         ? `<div class="pdf-prices${priceItems.length < 2 ? ' single' : ''}">` +
             priceItems.map(([label, val]) =>
