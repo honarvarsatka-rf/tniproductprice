@@ -735,6 +735,9 @@
     color:var(--ink);
   }
   .btn-sm{padding:8px 12px !important;font-size:12.5px !important;white-space:nowrap;}
+  .qp-bulk-row .btn{background:var(--brand); color:#fff;}
+  .qp-bulk-row .btn:hover{background:var(--brand-dark);}
+  .qp-bulk-row .btn:disabled{opacity:.6; cursor:default;}
   .qp-bulk-hint{font-size:11px;color:var(--ink-soft);margin-top:6px;line-height:1.6;}
 
   .toolbar-input{
@@ -1148,10 +1151,10 @@
   <div id="loginOverlay" aria-modal="true" role="dialog">
     <div class="login-box">
       <h2>ورود به پنل</h2>
-      <p>برای ورود، نام کاربری و رمز عبور را وارد کنید.</p>
+      <p>برای ورود، ایمیل و رمز عبور را وارد کنید.</p>
       <div class="login-field">
-        <label for="loginUsername">نام کاربری</label>
-        <input type="text" id="loginUsername" autocomplete="username" autofocus>
+        <label for="loginUsername">ایمیل</label>
+        <input type="email" id="loginUsername" autocomplete="username" autofocus>
       </div>
       <div class="login-field">
         <label for="loginPassword">رمز عبور</label>
@@ -1171,6 +1174,7 @@
     <div class="actions">
       <button class="btn btn-ghost" id="toggleAddBtn">+ افزودن محصول</button>
       <button class="btn btn-ghost" id="quickPriceBtn">⚡ تغییر سریع قیمت</button>
+      <button class="btn btn-ghost" id="logoutBtn" title="خروج از پنل">خروج</button>
       <button class="btn btn-primary" id="exportBtn">دریافت PDF</button>
     </div>
   </div>
@@ -1470,30 +1474,53 @@
 
 <script>
 
-  // ---------- simple page login ----------
-  const LOGIN_USER = 'tamin';
-  const LOGIN_PASS = '123456';
-
+  // ---------- real login via Supabase Auth ----------
+  // این دیگر یک چک ساده در جاوااسکریپت نیست: ایمیل/رمز واقعاً از سرور
+  // Supabase تایید می‌شود و فقط بعد از ورود موفق، توکن معتبر برای
+  // نوشتن/ویرایش/حذف در دیتابیس صادر می‌شود (RLS سمت Supabase این را
+  // اجرا می‌کند، نه این صفحه).
   const loginOverlay = document.getElementById('loginOverlay');
   const loginUsername = document.getElementById('loginUsername');
   const loginPassword = document.getElementById('loginPassword');
   const loginBtn = document.getElementById('loginBtn');
   const loginError = document.getElementById('loginError');
 
-  function tryLogin(){
-    const user = loginUsername.value.trim();
-    const pass = loginPassword.value;
+  function unlockPage(){
+    document.body.classList.remove('locked');
+    loginOverlay.style.display = 'none';
+    loginError.textContent = '';
+    loginPassword.value = '';
+  }
 
-    if(user === LOGIN_USER && pass === LOGIN_PASS){
-      document.body.classList.remove('locked');
-      loginOverlay.style.display = 'none';
-      loginError.textContent = '';
-      loginPassword.value = '';
+  function lockPage(){
+    document.body.classList.add('locked');
+    loginOverlay.style.display = 'flex';
+  }
+
+  async function tryLogin(){
+    const email = loginUsername.value.trim();
+    const pass = loginPassword.value;
+    if(!email || !pass){
+      loginError.textContent = 'ایمیل و رمز عبور را وارد کن.';
       return;
     }
 
-    loginError.textContent = 'نام کاربری یا رمز عبور اشتباه است.';
-    loginPassword.focus();
+    loginBtn.disabled = true;
+    const originalLabel = loginBtn.textContent;
+    loginBtn.textContent = 'در حال ورود...';
+    loginError.textContent = '';
+
+    const { error } = await sbClient.auth.signInWithPassword({ email, password: pass });
+
+    loginBtn.disabled = false;
+    loginBtn.textContent = originalLabel;
+
+    if(error){
+      loginError.textContent = 'ایمیل یا رمز عبور اشتباه است.';
+      loginPassword.focus();
+      return;
+    }
+    unlockPage();
   }
 
   loginBtn.addEventListener('click', tryLogin);
@@ -1518,6 +1545,18 @@ if(window.supabase && typeof window.supabase.createClient === 'function'){
   }
 } else {
   initError = 'کتابخانه اتصال به دیتابیس از اینترنت بارگذاری نشد. اتصال اینترنت یا مسدودکننده تبلیغات (Ad blocker) را بررسی کن، سپس صفحه را رفرش کن. اگر فایل را مستقیم با file:// باز کرده‌ای، بهتر است آن را روی یک هاست (مثل Netlify) منتشر کنی.';
+}
+
+// اگر قبلاً با همین مرورگر وارد شده باشد، نشست (session) معتبرش را
+// Supabase خودش نگه می‌دارد؛ در این صورت دوباره رمز نمی‌خواهد.
+if(sbClient){
+  sbClient.auth.getSession().then(({ data })=>{
+    if(data && data.session) unlockPage();
+  });
+  sbClient.auth.onAuthStateChange((_event, session)=>{
+    if(session) unlockPage();
+    else lockPage();
+  });
 }
 
 // ---------- seed data, used ONLY the first time the table is empty ----------
@@ -2447,6 +2486,11 @@ document.getElementById('closeQuickPriceBtn').addEventListener('click', ()=>{
   document.getElementById('quickPricePanel').classList.remove('open');
 });
 document.getElementById('quickPriceSearch').addEventListener('input', renderQuickPricePanel);
+
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  if(sbClient) await sbClient.auth.signOut();
+  lockPage();
+});
 
 // بالای پنل «تغییر سریع قیمت»: افزایش یا کاهش درصدی یکی از دو قیمت
 // (مصرف‌کننده یا همکاری — هر کدام که انتخاب شود) برای همان قیمت انتخاب‌شده،
