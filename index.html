@@ -1289,16 +1289,22 @@
         <button type="button" class="close-editor" id="closeQuickPriceBtn">×</button>
       </div>
       <div class="qp-bulk-box">
-        <div class="qp-bulk-label">محاسبه قیمت همکاری از روی قیمت مصرف‌کننده</div>
+        <div class="qp-bulk-label">تغییر درصدی قیمت</div>
         <div class="qp-bulk-row">
+          <select id="qpBulkField">
+            <option value="price">قیمت مصرف‌کننده</option>
+            <option value="price2">قیمت همکاری</option>
+          </select>
           <select id="qpBulkOp">
             <option value="minus">٪ کم شود</option>
             <option value="plus">٪ اضافه شود</option>
           </select>
+        </div>
+        <div class="qp-bulk-row" style="margin-top:8px;">
           <input type="number" id="qpBulkPercent" min="0" max="100" step="0.1" placeholder="درصد">
           <button type="button" class="btn btn-ghost btn-sm" id="qpBulkApplyBtn">اعمال</button>
         </div>
-        <div class="qp-bulk-hint">فقط روی محصولات همین لیست (بر اساس جستجوی پایین) اعمال می‌شود.</div>
+        <div class="qp-bulk-hint">همان قیمتی که انتخاب کرده‌اید، فقط روی محصولات همین لیست (بر اساس جستجوی پایین) به‌اندازه‌ی درصد وارد شده کم یا اضافه می‌شود.</div>
       </div>
       <div class="filter-section" style="border-bottom:none;padding-bottom:0;margin-bottom:8px;">
         <input type="text" id="quickPriceSearch" class="toolbar-input" style="width:100%;" placeholder="جستجوی نام محصول...">
@@ -2442,10 +2448,12 @@ document.getElementById('closeQuickPriceBtn').addEventListener('click', ()=>{
 });
 document.getElementById('quickPriceSearch').addEventListener('input', renderQuickPricePanel);
 
-// بالای پنل «تغییر سریع قیمت»: محاسبه‌ی گروهی قیمت همکاری از روی قیمت
-// مصرف‌کننده با یک درصد کاهش یا افزایش دلخواه، فقط برای محصولاتی که در
-// همان لحظه در لیست (بر اساس فیلتر جستجو) نمایش داده می‌شوند.
+// بالای پنل «تغییر سریع قیمت»: افزایش یا کاهش درصدی یکی از دو قیمت
+// (مصرف‌کننده یا همکاری — هر کدام که انتخاب شود) برای همان قیمت انتخاب‌شده،
+// فقط روی محصولاتی که در همان لحظه در لیست (بر اساس فیلتر جستجو) دیده می‌شوند.
 document.getElementById('qpBulkApplyBtn').addEventListener('click', async ()=>{
+  const field = document.getElementById('qpBulkField').value; // 'price' | 'price2'
+  const fieldLabel = field === 'price' ? 'مصرف‌کننده' : 'همکاری';
   const op = document.getElementById('qpBulkOp').value; // 'minus' | 'plus'
   const percent = parseFloat(document.getElementById('qpBulkPercent').value);
   if(document.getElementById('qpBulkPercent').value === '' || isNaN(percent) || percent < 0){
@@ -2456,17 +2464,17 @@ document.getElementById('qpBulkApplyBtn').addEventListener('click', async ()=>{
   const q = (document.getElementById('quickPriceSearch').value || '').trim().toLowerCase();
   const targets = products.filter(p =>
     (!q || (p.title || '').toLowerCase().includes(q)) &&
-    String(p.price ?? '').replace(/[^0-9.]/g, '').trim() !== ''
+    String(p[field] ?? '').replace(/[^0-9.]/g, '').trim() !== ''
   );
 
   if(targets.length === 0){
-    alert('محصولی با قیمت مصرف‌کننده معتبر در این لیست پیدا نشد.');
+    alert(`محصولی با قیمت ${fieldLabel} معتبر در این لیست پیدا نشد.`);
     return;
   }
 
   const factor = op === 'minus' ? (1 - percent / 100) : (1 + percent / 100);
   const opLabel = op === 'minus' ? 'کاهش' : 'افزایش';
-  if(!confirm(`قیمت همکاری ${targets.length} محصول بر اساس ${percent}% ${opLabel} نسبت به قیمت مصرف‌کننده محاسبه و جایگزین می‌شود. ادامه می‌دهید؟`)) return;
+  if(!confirm(`قیمت ${fieldLabel} ${targets.length} محصول به‌اندازه‌ی ${percent}% ${opLabel} می‌یابد. ادامه می‌دهید؟`)) return;
 
   const applyBtn = document.getElementById('qpBulkApplyBtn');
   applyBtn.disabled = true;
@@ -2474,13 +2482,13 @@ document.getElementById('qpBulkApplyBtn').addEventListener('click', async ()=>{
   applyBtn.textContent = 'در حال اعمال...';
 
   await Promise.all(targets.map(async p=>{
-    const basePrice = parseFloat(String(p.price).replace(/[^0-9.]/g, ''));
-    if(isNaN(basePrice)) return;
-    const newPrice2 = String(Math.round(basePrice * factor));
-    const before = p.price2;
-    if(before !== newPrice2) await logHistory({...p, price2: before}, 'update');
-    p.price2 = newPrice2;
-    await sbClient.from('products').update({ price2: p.price2 }).eq('id', p.id);
+    const baseVal = parseFloat(String(p[field]).replace(/[^0-9.]/g, ''));
+    if(isNaN(baseVal)) return;
+    const newVal = String(Math.round(baseVal * factor));
+    const before = p[field];
+    if(before !== newVal) await logHistory({...p, [field]: before}, 'update');
+    p[field] = newVal;
+    await sbClient.from('products').update({ [field]: p[field] }).eq('id', p.id);
   }));
 
   applyBtn.disabled = false;
