@@ -703,6 +703,39 @@
     color:var(--ink);
   }
   .qp-empty{font-size:12.5px;color:var(--ink-soft);text-align:center;padding:20px 0;}
+  .qp-bulk-box{
+    background:var(--panel-soft, #f6f8f6);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+    margin-bottom:12px;
+  }
+  .qp-bulk-label{font-size:12px;font-weight:700;color:var(--heading);margin-bottom:8px;}
+  .qp-bulk-row{display:flex;align-items:center;gap:6px;}
+  .qp-bulk-row select{
+    flex:0 0 auto;
+    padding:8px 8px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    font-family:inherit;
+    font-size:12.5px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .qp-bulk-row input[type="number"]{
+    flex:1;
+    min-width:0;
+    box-sizing:border-box;
+    padding:8px 9px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    font-family:inherit;
+    font-size:13px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .btn-sm{padding:8px 12px !important;font-size:12.5px !important;white-space:nowrap;}
+  .qp-bulk-hint{font-size:11px;color:var(--ink-soft);margin-top:6px;line-height:1.6;}
 
   .toolbar-input{
     padding:9px 12px;
@@ -1254,6 +1287,18 @@
       <div class="filter-panel-head">
         <h4>تغییر سریع قیمت</h4>
         <button type="button" class="close-editor" id="closeQuickPriceBtn">×</button>
+      </div>
+      <div class="qp-bulk-box">
+        <div class="qp-bulk-label">محاسبه قیمت همکاری از روی قیمت مصرف‌کننده</div>
+        <div class="qp-bulk-row">
+          <select id="qpBulkOp">
+            <option value="minus">٪ کم شود</option>
+            <option value="plus">٪ اضافه شود</option>
+          </select>
+          <input type="number" id="qpBulkPercent" min="0" max="100" step="0.1" placeholder="درصد">
+          <button type="button" class="btn btn-ghost btn-sm" id="qpBulkApplyBtn">اعمال</button>
+        </div>
+        <div class="qp-bulk-hint">فقط روی محصولات همین لیست (بر اساس جستجوی پایین) اعمال می‌شود.</div>
       </div>
       <div class="filter-section" style="border-bottom:none;padding-bottom:0;margin-bottom:8px;">
         <input type="text" id="quickPriceSearch" class="toolbar-input" style="width:100%;" placeholder="جستجوی نام محصول...">
@@ -2396,6 +2441,54 @@ document.getElementById('closeQuickPriceBtn').addEventListener('click', ()=>{
   document.getElementById('quickPricePanel').classList.remove('open');
 });
 document.getElementById('quickPriceSearch').addEventListener('input', renderQuickPricePanel);
+
+// بالای پنل «تغییر سریع قیمت»: محاسبه‌ی گروهی قیمت همکاری از روی قیمت
+// مصرف‌کننده با یک درصد کاهش یا افزایش دلخواه، فقط برای محصولاتی که در
+// همان لحظه در لیست (بر اساس فیلتر جستجو) نمایش داده می‌شوند.
+document.getElementById('qpBulkApplyBtn').addEventListener('click', async ()=>{
+  const op = document.getElementById('qpBulkOp').value; // 'minus' | 'plus'
+  const percent = parseFloat(document.getElementById('qpBulkPercent').value);
+  if(document.getElementById('qpBulkPercent').value === '' || isNaN(percent) || percent < 0){
+    alert('لطفاً یک درصد معتبر وارد کنید.');
+    return;
+  }
+
+  const q = (document.getElementById('quickPriceSearch').value || '').trim().toLowerCase();
+  const targets = products.filter(p =>
+    (!q || (p.title || '').toLowerCase().includes(q)) &&
+    String(p.price ?? '').replace(/[^0-9.]/g, '').trim() !== ''
+  );
+
+  if(targets.length === 0){
+    alert('محصولی با قیمت مصرف‌کننده معتبر در این لیست پیدا نشد.');
+    return;
+  }
+
+  const factor = op === 'minus' ? (1 - percent / 100) : (1 + percent / 100);
+  const opLabel = op === 'minus' ? 'کاهش' : 'افزایش';
+  if(!confirm(`قیمت همکاری ${targets.length} محصول بر اساس ${percent}% ${opLabel} نسبت به قیمت مصرف‌کننده محاسبه و جایگزین می‌شود. ادامه می‌دهید؟`)) return;
+
+  const applyBtn = document.getElementById('qpBulkApplyBtn');
+  applyBtn.disabled = true;
+  const originalLabel = applyBtn.textContent;
+  applyBtn.textContent = 'در حال اعمال...';
+
+  await Promise.all(targets.map(async p=>{
+    const basePrice = parseFloat(String(p.price).replace(/[^0-9.]/g, ''));
+    if(isNaN(basePrice)) return;
+    const newPrice2 = String(Math.round(basePrice * factor));
+    const before = p.price2;
+    if(before !== newPrice2) await logHistory({...p, price2: before}, 'update');
+    p.price2 = newPrice2;
+    await sbClient.from('products').update({ price2: p.price2 }).eq('id', p.id);
+  }));
+
+  applyBtn.disabled = false;
+  applyBtn.textContent = originalLabel;
+  document.getElementById('qpBulkPercent').value = '';
+  renderQuickPricePanel();
+  render();
+});
 
 // ---------- dark theme ----------
 // Always defaults to light mode. The user can switch to dark manually via
